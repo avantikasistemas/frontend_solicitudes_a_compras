@@ -9,7 +9,7 @@
           <button class="round-button" @click="agregarRow">
               <i class="fa-solid fa-plus"></i>
           </button>
-            <form @submit.prevent="" class="form-flex">
+            <form @submit.prevent="guardar_solicitud" class="form-flex">
                 <div v-for="(row, index) in rows" :key="index" class="row-group">
                     <div class="form-group">
                         <label>Referencia:</label>
@@ -18,6 +18,10 @@
                     <div class="form-group">
                         <label>Producto:</label>
                         <input type="text" class="input-field" v-model="row.producto">
+                    </div>
+                    <div class="form-group">
+                        <label>Cantidad:</label>
+                        <input type="number" class="input-field" v-model="row.cantidad">
                     </div>
                     <div class="form-group">
                         <label>Proveedor:</label>
@@ -40,7 +44,11 @@
                     </div>
                     <div class="form-group">
                         <label>Cuerpo del mensaje:</label>
-                        <textarea class="input-field" v-model="cuerpo_texto"></textarea>
+                        <textarea 
+                          class="input-field" 
+                          v-model="cuerpo_texto" 
+                          @input="autoExpand($event)"
+                        ></textarea>
                     </div>
                     <button type="submit" class="submit-button align-start">Registrar Solicitud</button>
                 </div>
@@ -93,7 +101,7 @@ import axios from "axios";
 import { Modal } from 'bootstrap';
 import logo from "@/assets/logo.png";
 
-const rows = ref([{ referencia: "", producto: "", proveedor: "", marca: "" }]);
+const rows = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }]);
 const negociador = ref(null);
 const cuerpo_texto = ref("");
 const list_negociadores = ref([]);
@@ -107,6 +115,30 @@ const mostrarErrores = ref(false);
 
 const router = useRouter();
 
+const guardar_solicitud = async () => {
+  console.log(rows.value);
+  console.log(negociador.value);
+  console.log(cuerpo_texto.value);
+    // try {
+    //     const response = await axios.post(
+    //         `${apiUrl}/get_parametros`, {},
+    //         {
+    //             headers: {
+    //                 Accept: "application/json",
+    //             }
+    //         }
+    //     );
+    //     if (response.status === 200) {
+    //         list_negociadores.value = response.data.data
+    //     }
+
+    // } catch (error) {
+    //     console.error('Error al cargar los datos:', error);
+    //     modalErrorInstance.value.show();
+    //     errorMsg.value = error.response.data.message;
+    // }
+};
+
 const cargarDatos = async () => {
     try {
         const response = await axios.post(
@@ -117,7 +149,6 @@ const cargarDatos = async () => {
                 }
             }
         );
-        console.log(response);
         if (response.status === 200) {
             list_negociadores.value = response.data.data
         }
@@ -130,7 +161,7 @@ const cargarDatos = async () => {
 };
 
 function agregarRow() {
-    rows.value.push({ referencia: "", producto: "", proveedor: "", marca: "" });
+    rows.value.push({ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" });
 }
 
 function eliminarRow(index) {
@@ -141,6 +172,13 @@ function eliminarRow(index) {
 function redirigir_home() {
   router.push('/home'); // Redirigir al dashboard
 };
+
+// ✅ Función para expandir automáticamente el textarea
+function autoExpand(event) {
+  const textarea = event.target;
+  textarea.style.height = "auto"; // Restablece la altura
+  textarea.style.height = `${textarea.scrollHeight}px`; // Ajusta la altura al contenido
+}
 
 // ✅ Función mounted que carga información ANTES de que la página renderice
 onMounted(() => {
