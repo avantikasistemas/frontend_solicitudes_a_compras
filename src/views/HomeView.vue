@@ -1,59 +1,168 @@
 <template>
     <div class="container">
-        <div class="form-container">
-          <div class="header-container">
-            <img class="img-title" :src="logo" :alt="logo">
-            <h2>SOLICITUD DE COTIZACIONES A COMPRAS</h2>
+      <div class="header-container">
+        <img class="img-title" :src="logo" :alt="logo">
+        <h2>SOLICITUD DE COTIZACIONES A COMPRAS</h2>
+      </div>
+
+      <!-- Acordeón de filtros -->
+      <div class="accordion" id="filterAccordion">
+          <div class="accordion-item" style="margin: 20px 20px;">
+            <h2 class="accordion-header" id="headingFilters">
+                <button 
+                    class="accordion-button collapsed" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#collapseFilters" 
+                    aria-expanded="false" 
+                    aria-controls="collapseFilters"
+                    >
+                    Filtros
+                </button>
+            </h2>
+            <div 
+                id="collapseFilters" 
+                class="accordion-collapse collapse" 
+                aria-labelledby="headingFilters" 
+                data-bs-parent="#filterAccordion"
+            >
+                <div class="accordion-body">
+                    <div class="filter-container">
+                      <div class="form-container">
+                        <!-- Botón redondo flotante -->
+                        <button class="round-button" @click="agregarRow">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                          <form @submit.prevent="guardar_solicitud" class="form-flex">
+                              <div v-for="(row, index) in productos" :key="index" class="row-group">
+                                  <div class="form-group">
+                                      <label>Referencia:</label>
+                                      <input type="text" class="input-field" v-model="row.referencia">
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Producto:</label>
+                                      <input type="text" class="input-field" v-model="row.producto">
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Cantidad:</label>
+                                      <input type="number" class="input-field" v-model="row.cantidad" required>
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Proveedor:</label>
+                                      <input type="text" class="input-field" v-model="row.proveedor">
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Marca:</label>
+                                      <input type="text" class="input-field" v-model="row.marca">
+                                  </div>
+                                  <button type="button" class="delete-button" @click="eliminarRow(index)">❌</button>
+                              </div>
+                              <hr>
+                              <div class="column-group">
+                                  <div class="form-group small-width">
+                                      <label>Negociador:</label>
+                                      <select class="input-field" v-model="negociador">
+                                          <option :value="null">Seleccione...</option>
+                                          <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
+                                      </select>
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Cuerpo del mensaje:</label>
+                                      <textarea 
+                                        class="input-field" 
+                                        v-model="cuerpo_texto" 
+                                        @input="autoExpand($event)"
+                                      ></textarea>
+                                  </div>
+                                  <button type="submit" class="submit-button align-start">Registrar Solicitud</button>
+                              </div>
+                          </form>
+                      </div>
+                        
+                    </div>
+                </div>
+            </div>
           </div>
-          <!-- Botón redondo flotante -->
-          <button class="round-button" @click="agregarRow">
-              <i class="fa-solid fa-plus"></i>
-          </button>
-            <form @submit.prevent="guardar_solicitud" class="form-flex">
-                <div v-for="(row, index) in rows" :key="index" class="row-group">
-                    <div class="form-group">
-                        <label>Referencia:</label>
-                        <input type="text" class="input-field" v-model="row.referencia">
-                    </div>
-                    <div class="form-group">
-                        <label>Producto:</label>
-                        <input type="text" class="input-field" v-model="row.producto">
-                    </div>
-                    <div class="form-group">
-                        <label>Cantidad:</label>
-                        <input type="number" class="input-field" v-model="row.cantidad">
-                    </div>
-                    <div class="form-group">
-                        <label>Proveedor:</label>
-                        <input type="text" class="input-field" v-model="row.proveedor">
-                    </div>
-                    <div class="form-group">
-                        <label>Marca:</label>
-                        <input type="text" class="input-field" v-model="row.marca">
-                    </div>
-                    <button type="button" class="delete-button" @click="eliminarRow(index)">❌</button>
-                </div>
-                <hr>
-                <div class="column-group">
-                    <div class="form-group small-width">
-                        <label>Negociador:</label>
-                        <select class="input-field" v-model="negociador">
-                            <option :value="null">Seleccione...</option>
-                            <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Cuerpo del mensaje:</label>
-                        <textarea 
-                          class="input-field" 
-                          v-model="cuerpo_texto" 
-                          @input="autoExpand($event)"
-                        ></textarea>
-                    </div>
-                    <button type="submit" class="submit-button align-start">Registrar Solicitud</button>
-                </div>
-            </form>
+      </div>
+          
+    </div>
+
+    <div class="container-n">
+        <div class="table-container">
+            <h3 class="h3-title">NÚMERO DE REGISTROS</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th># Id</th>
+                        <th>Fecha de solicitud</th>
+                        <th>Estado de solicitud</th>
+                        <th>Solicitante</th>
+                        <th>Negociador</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-if="lista_solicitudes.length === 0">
+                        <td colspan="6" class="no-registros">No hay registros disponibles</td>
+                    </tr>
+                    <tr v-else v-for="sol in lista_solicitudes" :key="sol.id">
+                        <td>{{ sol.id }}</td>
+                        <td>{{ sol.created_at }}</td>
+                        <td>{{ sol.estado_solicitud }}</td>
+                        <td>{{ sol.usuario_creador_solicitud }}</td>
+                        <td>{{ sol.negociador }}</td>
+                        <td>
+                            <i 
+                                class="fa-solid fa-eye" 
+                                style="cursor: pointer; color: #2778bf;" 
+                                @click="mostrarDetalles(sol.detalles)"
+                            ></i>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
+        <!-- <div class="pagination" v-if="total_registros > 15">
+          <label for="records-per-page">Registros por página:</label>
+          <select 
+            id="records-per-page" 
+            v-model="limit" 
+            @change="changePage(1)"
+          >
+            <option value="15">15</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+          </select>
+          <button 
+            :disabled="position <= 1" 
+            @click="changePage(1)"
+          >
+            Primera
+          </button>
+          
+          <button 
+            :disabled="position <= 1" 
+            @click="changePage(position - 1)"
+          >
+            Anterior
+          </button>
+          
+          <span>Página {{ position }} de {{ total_paginas }}</span>
+          
+          <button 
+            :disabled="position >= total_paginas" 
+            @click="changePage(position + 1)"
+          >
+            Siguiente
+          </button>
+          
+          <button 
+            :disabled="position >= total_paginas" 
+            @click="changePage(total_paginas)"
+          >
+            Última
+          </button>
+        </div> -->
     </div>
 
     <!-- Modal de éxito -->
@@ -91,6 +200,47 @@
             </div>
         </div>
     </div>
+
+    <!-- Modal para mostrar detalles -->
+    <div class="modal fade" id="detallesModal" tabindex="-1" aria-labelledby="detallesModalLabel" aria-hidden="true" ref="detallesModal">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="detallesModalLabel">Detalles de la Solicitud</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" v-if="!detallesSolicitud || detallesSolicitud.length === 0">
+                    <p>No hay detalles.</p>
+                </div>
+                <div class="modal-body" v-else>
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Referencia</th>
+                                <th>Producto</th>
+                                <th>Cantidad</th>
+                                <th>Proveedor</th>
+                                <th>Marca</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="detalle in detallesSolicitud" :key="detalle.id">
+                                <td>{{ detalle.referencia }}</td>
+                                <td>{{ detalle.producto }}</td>
+                                <td>{{ detalle.cantidad }}</td>
+                                <td>{{ detalle.proveedor }}</td>
+                                <td>{{ detalle.marca }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </template>
 
 <script setup>
@@ -101,42 +251,50 @@ import axios from "axios";
 import { Modal } from 'bootstrap';
 import logo from "@/assets/logo.png";
 
-const rows = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }]);
+const productos = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }]);
 const negociador = ref(null);
 const cuerpo_texto = ref("");
 const list_negociadores = ref([]);
+const lista_solicitudes = ref([]);
 
 const modalInstance = ref(null);
 const modalErrorInstance = ref(null);
+const modalDetallesInstance = ref(null);
 
 const msg = ref("");
 const errorMsg = ref("");
-const mostrarErrores = ref(false);
+const detallesSolicitud = ref(""); // Almacena los detalles de la solicitud seleccionada
 
 const router = useRouter();
 
 const guardar_solicitud = async () => {
-  console.log(rows.value);
-  console.log(negociador.value);
-  console.log(cuerpo_texto.value);
-    // try {
-    //     const response = await axios.post(
-    //         `${apiUrl}/get_parametros`, {},
-    //         {
-    //             headers: {
-    //                 Accept: "application/json",
-    //             }
-    //         }
-    //     );
-    //     if (response.status === 200) {
-    //         list_negociadores.value = response.data.data
-    //     }
 
-    // } catch (error) {
-    //     console.error('Error al cargar los datos:', error);
-    //     modalErrorInstance.value.show();
-    //     errorMsg.value = error.response.data.message;
-    // }
+    try {
+        const response = await axios.post(
+            `${apiUrl}/guardar_solicitud`, 
+            {
+                lista_productos: productos.value,
+                negociador: negociador.value,
+                cuerpo_texto: cuerpo_texto.value,
+            },
+            {
+                headers: {
+                    Accept: "application/json",
+                }
+            }
+        );
+        if (response.status === 200) {
+            msg.value = response.data.message;
+            modalInstance.value.show();
+            limpiarCampos();
+            mostrarSolicitudes();
+        }
+
+    } catch (error) {
+        console.error('Error al cargar los datos:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+    }
 };
 
 const cargarDatos = async () => {
@@ -160,12 +318,39 @@ const cargarDatos = async () => {
     }
 };
 
+const mostrarSolicitudes = async () => {
+    try {
+        const response = await axios.post(
+            `${apiUrl}/mostrar_solicitudes`, {},
+            {
+                headers: {
+                    Accept: "application/json",
+                }
+            }
+        );
+        if (response.status === 200) {
+            lista_solicitudes.value = response.data.data
+        }
+
+    } catch (error) {
+        console.error('Error al cargar los datos:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+    }
+};
+
+const limpiarCampos = () => {
+    productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }];
+    negociador.value = null;
+    cuerpo_texto.value = "";
+};
+
 function agregarRow() {
-    rows.value.push({ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" });
+    productos.value.push({ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" });
 }
 
 function eliminarRow(index) {
-    rows.value.splice(index, 1);
+    productos.value.splice(index, 1);
 }
 
 // ✅ Función que redirige al a página principal
@@ -180,12 +365,20 @@ function autoExpand(event) {
   textarea.style.height = `${textarea.scrollHeight}px`; // Ajusta la altura al contenido
 }
 
+// ✅ Función para mostrar los detalles en el modal
+function mostrarDetalles(detalles) {
+    detallesSolicitud.value = detalles;
+    modalDetallesInstance.value.show();
+}
+
 // ✅ Función mounted que carga información ANTES de que la página renderice
 onMounted(() => {
   modalInstance.value = new Modal(exitoModal);
   modalErrorInstance.value = new Modal(errorModal);
+  modalDetallesInstance.value = new Modal(detallesModal);
 
   cargarDatos();
+  mostrarSolicitudes();
 
 });
 
@@ -210,15 +403,29 @@ onMounted(() => {
   margin-bottom: 16px;
 }
 .header-container {
+  margin: 20px 20px;
   display: flex;
   align-items: center;
+}
+
+.accordion {
+  margin-top: 1px;
+}
+
+.accordion-button{
+    font-size: 14px;
+    padding: 10px;
+}
+
+.accordion-body .filter-container h2 {
+    font-size: 1.2rem;
 }
 
 /* Botón redondo */
 .round-button {
     position: fixed;
     right: 30px;
-    top: 30px;
+    top: 130px;
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -266,16 +473,6 @@ onMounted(() => {
   min-width: 150px; /* Evita que se vuelvan demasiado pequeños */
 }
 
-textarea.input-field {
-  resize: none; /* Evita que el usuario cambie el tamaño del textarea */
-}
-
-.submit-button {
-  flex: 1 1 33.3%; /* El botón también ocupa el 33.3% del ancho */
-  align-self: flex-end; /* Alinea el botón al final */
-  max-width: 150px; /* Limita el ancho máximo del botón */
-}
-
 .form-group:nth-child(2), /* Producto */
 .form-group:nth-child(3) { /* Proveedor */
   flex: 2 1 40%; /* Ocupan más espacio proporcionalmente */
@@ -287,35 +484,6 @@ textarea.input-field {
   margin-bottom: 4px;
 }
 
-.custom-select {
-position: relative;
-width: 100%;
-min-height: 37px;
-border-radius: 4px;
-padding: 10px;
-border: 1px solid #ccc;
-cursor: pointer;
-background: white;
-}
-.selected-options {
-display: flex;
-flex-wrap: wrap;
-gap: 2px;
-font-size: 14px;
-}
-
-.selected {
-  background-color: #5a4bbf;
-  color: white;
-  font-weight: bold;
-  transition: 0.4s;
-}
-
-.selected:hover {
-  background-color: #afa9da;
-  color: white;
-  font-weight: bold;
-}
 
 .input-field {
   width: 100%;
@@ -341,16 +509,52 @@ font-size: 14px;
   background: #4385be;
 }
 
-.error .input-field,
-.error select {
-  border-color: red;
-  background-color: #ffe6e6;
+.container-n {
+    width: 100%;
+    height: calc(100vh - 120px); /* Ajusta la altura para que la tabla ocupe el espacio restante */
+    padding: 16px;
+    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-self: center;
+    overflow: hidden; /* Evita el scroll en toda la página */
 }
 
-.error-text {
-  color: red;
-  font-size: 0.85em;
-  margin-top: 4px;
+.table-container {
+    flex-grow: 1; /* Permite que la tabla ocupe todo el espacio restante */
+    overflow-y: auto; /* Activa el scroll interno en la tabla */
+    max-height: 100%; /* Se ajusta a la altura disponible */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+
+    position: relative;
+}
+/* Dejar fija la cabecera */
+thead {
+    position: sticky;
+    top: 0;
+    background-color: #e5e7eb; /* Fijar color de fondo para que no sea transparente */
+    z-index: 10; /* Asegurar que esté sobre el contenido */
+}
+th, td {
+    border: 1px solid #e5e7eb;
+    padding: 8px;
+    text-align: left;
+    font-size: 0.75rem;
+}
+th {
+    background-color: #e5e7eb;
+}
+
+.no-registros {
+    text-align: center;
+    font-weight: bold;
+    color: #888;
+    padding: 16px;
+    font-size: 1rem;
 }
 
 .row-group {
