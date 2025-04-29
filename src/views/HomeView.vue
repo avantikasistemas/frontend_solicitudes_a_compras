@@ -88,7 +88,7 @@
           </div>
       </div>
 
-           <!-- Acordeón de filtros -->
+      <!-- Acordeón de filtros -->
       <div class="accordion" id="filterAccordion">
           <div class="accordion-item" style="margin: 20px 20px;">
             <h2 class="accordion-header" id="headingFilters">
@@ -129,7 +129,7 @@
                                       <label>Solicitante:</label>
                                       <select class="input-field" v-model="filtro_solicitante">
                                           <option :value="null">Seleccione...</option>
-                                          <option v-for="soli in list_solicitantes" :value="soli.cedula">{{ soli.nombre }}</option>
+                                          <option v-for="soli in list_solicitantes" :value="soli.usuario">{{ soli.nombre }}</option>
                                       </select>
                                   </div>
                                   <div class="form-group">
@@ -152,10 +152,9 @@
             </div>
           </div>
       </div>
-          
     </div>
 
-      <div class="container-n">
+    <div class="container-n">
           <div class="table-container">
             <h3 class="h3-title">REGISTROS</h3>
             <table>
@@ -262,7 +261,13 @@
                 <div class="modal-body">
                     {{ errorMsg }}
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" v-if="token_status===401">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @click="logout">Cerrar</button>
+                </div>
+                <div class="modal-footer" v-else-if="token_status===403">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+                <div class="modal-footer" v-else>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
                 </div>
             </div>
@@ -384,6 +389,13 @@ const guardar_solicitud = async () => {
         console.error('Error al cargar los datos:', error);
         modalErrorInstance.value.show();
         errorMsg.value = error.response.data.message;
+        if (error.response.status === 401) {
+          token_status.value = error.response.status;
+          errorMsg.value = error.response.data.detail;
+        } else if (error.response.status === 403) {
+            token_status.value = error.response.status;
+            errorMsg.value = error.response.data.detail;
+        }
     }
 };
 
@@ -444,8 +456,7 @@ const mostrarSolicitudes = async () => {
             },
             {
                 headers: {
-                    Accept: "application/json",
-                    Authorization: `Bearer ${token.value}`
+                    Accept: "application/json"
                 }
             }
         );
@@ -460,8 +471,7 @@ const mostrarSolicitudes = async () => {
         modalErrorInstance.value.show();
         errorMsg.value = error.response.data.message;
     }
-};
-
+}
 
 const mostrarEstadosSolicitud = async () => {
     try {
@@ -503,31 +513,37 @@ const limpiarCampos = () => {
 const limpiarCamposFiltro = async () => {
   filtro_id_solicitud.value = "";
   filtro_estado_solicitud.value = null;
+  filtro_solicitante.value = null;
   filtro_negociador.value = null;
   await mostrarSolicitudes();
 };
 
 function agregarRow() {
     productos.value.push({ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" });
-}
+};
 
 function eliminarRow(index) {
     productos.value.splice(index, 1);
-}
+};
 
 // ✅ Función para expandir automáticamente el textarea
 function autoExpand(event) {
   const textarea = event.target;
   textarea.style.height = "auto"; // Restablece la altura
   textarea.style.height = `${textarea.scrollHeight}px`; // Ajusta la altura al contenido
-}
+};
 
 // ✅ Función para mostrar los detalles en el modal
 function mostrarDetalles(detalles, cuerpo_texto) {
     detallesSolicitud.value = detalles;
     cuerpoTexto.value = cuerpo_texto;
     modalDetallesInstance.value.show();
-}
+};
+
+function logout() {
+  localStorage.clear();
+  router.push('/'); // Redirigir al login
+};
 
 // ✅ Función mounted que carga información ANTES de que la página renderice
 onMounted(() => {
