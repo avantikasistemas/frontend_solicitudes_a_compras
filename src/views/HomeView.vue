@@ -5,7 +5,90 @@
         <h2>SOLICITUD DE COTIZACIONES A COMPRAS</h2>
       </div>
 
-      <!-- Acordeón de filtros -->
+      <!-- Acordeón de productos -->
+      <div class="accordion" id="productosAccordion">
+          <div class="accordion-item" style="margin: 20px 20px;">
+            <h2 class="accordion-header" id="headingProductos">
+                <button 
+                    class="accordion-button collapsed" 
+                    type="button" 
+                    data-bs-toggle="collapse" 
+                    data-bs-target="#collapseProductos" 
+                    aria-expanded="false" 
+                    aria-controls="collapseProductos"
+                    >
+                    Productos
+                </button>
+            </h2>
+            <div 
+                id="collapseProductos" 
+                class="accordion-collapse collapse" 
+                aria-labelledby="headingProductos" 
+                data-bs-parent="#productosAccordion"
+            >
+                <div class="accordion-body">
+                    <div class="filter-container">
+                      <div class="form-container">
+                        <!-- Botón redondo flotante -->
+                        <button class="round-button" @click="agregarRow">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                          <form @submit.prevent="guardar_solicitud" class="form-flex">
+                              <div v-for="(row, index) in productos" :key="index" class="row-group">
+                                  <div class="form-group">
+                                      <label>Referencia:</label>
+                                      <input type="text" class="input-field" v-model="row.referencia">
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Descripción:</label>
+                                      <input type="text" class="input-field" v-model="row.producto">
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Cantidad:</label>
+                                      <input type="number" class="input-field" v-model="row.cantidad" required>
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Proveedor:</label>
+                                      <input type="text" class="input-field" v-model="row.proveedor">
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Marca:</label>
+                                      <input type="text" class="input-field" v-model="row.marca">
+                                  </div>
+                                  <button type="button" class="delete-button" @click="eliminarRow(index)">❌</button>
+                              </div>
+                              <hr>
+                              <div class="column-group">
+                                  <div class="form-group small-width">
+                                      <label>Negociador:</label>
+                                      <select class="input-field" v-model="negociador" required>
+                                          <option :value="null">Seleccione...</option>
+                                          <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
+                                      </select>
+                                  </div>
+                              </div>
+                              <div class="column-group">
+                                  <div class="form-group">
+                                      <label>Cuerpo del mensaje:</label>
+                                      <textarea 
+                                        class="input-field" 
+                                        v-model="cuerpo_texto" 
+                                        @input="autoExpand($event)"
+                                        ref="textarea"
+                                      ></textarea>
+                                  </div>
+                                  <button type="submit" class="submit-button align-start">Registrar Solicitud</button>
+                              </div>
+                          </form>
+                      </div>
+                        
+                    </div>
+                </div>
+            </div>
+          </div>
+      </div>
+
+           <!-- Acordeón de filtros -->
       <div class="accordion" id="filterAccordion">
           <div class="accordion-item" style="margin: 20px 20px;">
             <h2 class="accordion-header" id="headingFilters">
@@ -29,53 +112,38 @@
                 <div class="accordion-body">
                     <div class="filter-container">
                       <div class="form-container">
-                        <!-- Botón redondo flotante -->
-                        <button class="round-button" @click="agregarRow">
-                            <i class="fa-solid fa-plus"></i>
-                        </button>
-                          <form @submit.prevent="guardar_solicitud" class="form-flex">
-                              <div v-for="(row, index) in productos" :key="index" class="row-group">
+                          <form @submit.prevent="" class="form-flex">
+                              <div class="row-group">
                                   <div class="form-group">
-                                      <label>Referencia:</label>
-                                      <input type="text" class="input-field" v-model="row.referencia">
+                                      <label>Id de solicitud:</label>
+                                      <input type="number" class="input-field" v-model="filtro_id_solicitud">
                                   </div>
                                   <div class="form-group">
-                                      <label>Producto:</label>
-                                      <input type="text" class="input-field" v-model="row.producto">
+                                    <label>Estado de Solicitud:</label>
+                                    <select class="input-field" v-model="filtro_estado_solicitud">
+                                        <option :value="null">Seleccione...</option>
+                                        <option v-for="est in lista_estados_solicitud" :value="est.id">{{ est.nombre }}</option>
+                                    </select>
                                   </div>
                                   <div class="form-group">
-                                      <label>Cantidad:</label>
-                                      <input type="number" class="input-field" v-model="row.cantidad" required>
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Proveedor:</label>
-                                      <input type="text" class="input-field" v-model="row.proveedor">
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Marca:</label>
-                                      <input type="text" class="input-field" v-model="row.marca">
-                                  </div>
-                                  <button type="button" class="delete-button" @click="eliminarRow(index)">❌</button>
-                              </div>
-                              <hr>
-                              <div class="column-group">
-                                  <div class="form-group small-width">
-                                      <label>Negociador:</label>
-                                      <select class="input-field" v-model="negociador">
+                                      <label>Solicitante:</label>
+                                      <select class="input-field" v-model="filtro_solicitante">
                                           <option :value="null">Seleccione...</option>
-                                          <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
+                                          <option v-for="soli in list_solicitantes" :value="soli.cedula">{{ soli.nombre }}</option>
                                       </select>
                                   </div>
                                   <div class="form-group">
-                                      <label>Cuerpo del mensaje:</label>
-                                      <textarea 
-                                        class="input-field" 
-                                        v-model="cuerpo_texto" 
-                                        @input="autoExpand($event)"
-                                      ></textarea>
+                                    <label>Negociador:</label>
+                                    <select class="input-field" v-model="filtro_negociador">
+                                        <option :value="null">Seleccione...</option>
+                                        <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
+                                    </select>
                                   </div>
-                                  <button type="submit" class="submit-button align-start">Registrar Solicitud</button>
                               </div>
+                              <div class="row-group">
+                                <button type="submit" class="submit-button align-start" @click="mostrarSolicitudes">Consultar</button>
+                                <button type="submit" class="clean-button align-start" @click="limpiarCamposFiltro">Limpiar</button>
+                              </div>                      
                           </form>
                       </div>
                         
@@ -87,9 +155,9 @@
           
     </div>
 
-    <div class="container-n">
-        <div class="table-container">
-            <h3 class="h3-title">NÚMERO DE REGISTROS</h3>
+      <div class="container-n">
+          <div class="table-container">
+            <h3 class="h3-title">REGISTROS</h3>
             <table>
                 <thead>
                     <tr>
@@ -108,21 +176,21 @@
                     <tr v-else v-for="sol in lista_solicitudes" :key="sol.id">
                         <td>{{ sol.id }}</td>
                         <td>{{ sol.created_at }}</td>
-                        <td>{{ sol.estado_solicitud }}</td>
-                        <td>{{ sol.usuario_creador_solicitud }}</td>
-                        <td>{{ sol.negociador }}</td>
+                        <td>{{ sol.estado_solicitud_nombre }}</td>
+                        <td>{{ sol.usuario_nombre }}</td>
+                        <td>{{ sol.negociador_nombre }}</td>
                         <td>
                             <i 
                                 class="fa-solid fa-eye" 
                                 style="cursor: pointer; color: #2778bf;" 
-                                @click="mostrarDetalles(sol.detalles)"
+                                @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto)"
                             ></i>
                         </td>
                     </tr>
                 </tbody>
             </table>
         </div>
-        <!-- <div class="pagination" v-if="total_registros > 15">
+        <div class="pagination" v-if="total_registros > 15">
           <label for="records-per-page">Registros por página:</label>
           <select 
             id="records-per-page" 
@@ -162,7 +230,7 @@
           >
             Última
           </button>
-        </div> -->
+        </div>
     </div>
 
     <!-- Modal de éxito -->
@@ -217,7 +285,7 @@
                         <thead>
                             <tr>
                                 <th>Referencia</th>
-                                <th>Producto</th>
+                                <th>Descripción</th>
                                 <th>Cantidad</th>
                                 <th>Proveedor</th>
                                 <th>Marca</th>
@@ -233,6 +301,7 @@
                             </tr>
                         </tbody>
                     </table>
+                    <p>{{cuerpoTexto}}</p>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -251,11 +320,16 @@ import axios from "axios";
 import { Modal } from 'bootstrap';
 import logo from "@/assets/logo.png";
 
+const token = ref("");
+const usuario_creador = ref("");
+
 const productos = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }]);
 const negociador = ref(null);
 const cuerpo_texto = ref("");
 const list_negociadores = ref([]);
+const list_solicitantes = ref([]);
 const lista_solicitudes = ref([]);
+const lista_estados_solicitud = ref([]);
 
 const modalInstance = ref(null);
 const modalErrorInstance = ref(null);
@@ -263,7 +337,21 @@ const modalDetallesInstance = ref(null);
 
 const msg = ref("");
 const errorMsg = ref("");
-const detallesSolicitud = ref(""); // Almacena los detalles de la solicitud seleccionada
+const detallesSolicitud = ref("");
+const cuerpoTexto = ref("");
+const textarea = ref(null);
+
+const filtro_id_solicitud = ref("");
+const filtro_estado_solicitud = ref(null);
+const filtro_solicitante = ref("");
+const filtro_negociador = ref(null);
+
+const total_paginas = ref(0);
+const total_registros = ref(0);
+const limit = ref(15);
+const position = ref(1);
+
+const token_status = ref(0);
 
 const router = useRouter();
 
@@ -274,12 +362,14 @@ const guardar_solicitud = async () => {
             `${apiUrl}/guardar_solicitud`, 
             {
                 lista_productos: productos.value,
+                solicitante: usuario_creador.value,
                 negociador: negociador.value,
                 cuerpo_texto: cuerpo_texto.value,
             },
             {
                 headers: {
                     Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`
                 }
             }
         );
@@ -304,6 +394,7 @@ const cargarDatos = async () => {
             {
                 headers: {
                     Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`
                 }
             }
         );
@@ -318,10 +409,10 @@ const cargarDatos = async () => {
     }
 };
 
-const mostrarSolicitudes = async () => {
+const cargarSolicitantes = async () => {
     try {
         const response = await axios.post(
-            `${apiUrl}/mostrar_solicitudes`, {},
+            `${apiUrl}/get_personal_cotizaciones`, {},
             {
                 headers: {
                     Accept: "application/json",
@@ -329,7 +420,7 @@ const mostrarSolicitudes = async () => {
             }
         );
         if (response.status === 200) {
-            lista_solicitudes.value = response.data.data
+            list_solicitantes.value = response.data.data
         }
 
     } catch (error) {
@@ -339,10 +430,81 @@ const mostrarSolicitudes = async () => {
     }
 };
 
+const mostrarSolicitudes = async () => {
+    try {
+        const response = await axios.post(
+            `${apiUrl}/mostrar_solicitudes`, 
+            {
+                solicitud_id: filtro_id_solicitud.value,
+                estado_solicitud: filtro_estado_solicitud.value,
+                solicitante: filtro_solicitante.value,
+                negociador: filtro_negociador.value,
+                limit: parseInt(limit.value),
+                position: parseInt(position.value),
+            },
+            {
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`
+                }
+            }
+        );
+        if (response.status === 200) {
+            lista_solicitudes.value = response.data.data.registros;
+            total_paginas.value = response.data.data.total_pag;
+            total_registros.value = response.data.data.total_registros;
+        }
+
+    } catch (error) {
+        console.error('Error al cargar los datos:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+    }
+};
+
+
+const mostrarEstadosSolicitud = async () => {
+    try {
+        const response = await axios.post(
+            `${apiUrl}/get_estados_solicitud`, {},
+            {
+                headers: {
+                    Accept: "application/json",
+                }
+            }
+        );
+        if (response.status === 200) {
+            lista_estados_solicitud.value = response.data.data
+        }
+
+    } catch (error) {
+        console.error('Error al cargar los datos:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+    }
+};
+
+const changePage = async (newPosition) => {
+  position.value = newPosition;
+  await mostrarSolicitudes(); // Vuelve a cargar los datos con el nuevo límite y posición
+};
+
 const limpiarCampos = () => {
     productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }];
     negociador.value = null;
     cuerpo_texto.value = "";
+
+    // Restablece el tamaño del textarea usando el ref
+    if (textarea.value) {
+        textarea.value.style.height = "auto"; // vuelve al tamaño original
+    }
+};
+
+const limpiarCamposFiltro = async () => {
+  filtro_id_solicitud.value = "";
+  filtro_estado_solicitud.value = null;
+  filtro_negociador.value = null;
+  await mostrarSolicitudes();
 };
 
 function agregarRow() {
@@ -353,11 +515,6 @@ function eliminarRow(index) {
     productos.value.splice(index, 1);
 }
 
-// ✅ Función que redirige al a página principal
-function redirigir_home() {
-  router.push('/home'); // Redirigir al dashboard
-};
-
 // ✅ Función para expandir automáticamente el textarea
 function autoExpand(event) {
   const textarea = event.target;
@@ -366,18 +523,28 @@ function autoExpand(event) {
 }
 
 // ✅ Función para mostrar los detalles en el modal
-function mostrarDetalles(detalles) {
+function mostrarDetalles(detalles, cuerpo_texto) {
     detallesSolicitud.value = detalles;
+    cuerpoTexto.value = cuerpo_texto;
     modalDetallesInstance.value.show();
 }
 
 // ✅ Función mounted que carga información ANTES de que la página renderice
 onMounted(() => {
+  token.value = localStorage.getItem("token");
+  usuario_creador.value = localStorage.getItem("usuario_creador");
+
   modalInstance.value = new Modal(exitoModal);
   modalErrorInstance.value = new Modal(errorModal);
   modalDetallesInstance.value = new Modal(detallesModal);
 
+  if (!token.value) {
+      router.push('/'); // Redirigir al login si no hay token
+  }
+
   cargarDatos();
+  cargarSolicitantes();
+  mostrarEstadosSolicitud();
   mostrarSolicitudes();
 
 });
@@ -387,7 +554,7 @@ onMounted(() => {
 <style scoped>
 
 .container {
-  max-width: 100%;
+  max-width: 80%;
   margin: 0 auto;
   padding: 0;
 }
@@ -406,6 +573,9 @@ onMounted(() => {
   margin: 20px 20px;
   display: flex;
   align-items: center;
+}
+.header-container h2{
+  font-size: 1.3rem;
 }
 
 .accordion {
@@ -509,8 +679,25 @@ onMounted(() => {
   background: #4385be;
 }
 
+.clean-button {
+  margin-top: 10px;
+  padding: 10px;
+  background: #940404;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s;
+  font-size: 0.9em;
+}
+
+.clean-button:hover {
+  background: #f84f4f;
+}
+
 .container-n {
-    width: 100%;
+    width: 80%; /* Igual que el contenedor superior */
+    margin: 0 auto; /* Centra horizontalmente el contenedor */
     height: calc(100vh - 120px); /* Ajusta la altura para que la tabla ocupe el espacio restante */
     padding: 16px;
     background-color: #ffffff;
@@ -518,6 +705,10 @@ onMounted(() => {
     flex-direction: column;
     align-self: center;
     overflow: hidden; /* Evita el scroll en toda la página */
+}
+
+.h3-title{
+  font-size: 1.3rem;
 }
 
 .table-container {
@@ -529,7 +720,6 @@ onMounted(() => {
 table {
     width: 100%;
     border-collapse: collapse;
-
     position: relative;
 }
 /* Dejar fija la cabecera */
@@ -539,14 +729,21 @@ thead {
     background-color: #e5e7eb; /* Fijar color de fondo para que no sea transparente */
     z-index: 10; /* Asegurar que esté sobre el contenido */
 }
+th {
+    background-color: #2778bf; /* Nuevo color para el encabezado de la tabla */
+    color: white; /* Asegura que el texto sea legible */
+}
+
+.modal-body table th {
+    background-color: #2778bf; /* Nuevo color para el encabezado de la tabla dentro del modal */
+    color: white; /* Asegura que el texto sea legible */
+}
+
 th, td {
     border: 1px solid #e5e7eb;
     padding: 8px;
-    text-align: left;
+    text-align: center; /* Centra el texto en la cabecera y las filas */
     font-size: 0.75rem;
-}
-th {
-    background-color: #e5e7eb;
 }
 
 .no-registros {
@@ -602,6 +799,66 @@ textarea.input-field {
   background: #ffc4c4;
 }
 
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin-top: 20px;
+  gap: 2px;
+  font-size: 142px; /* Reduce el tamaño de la fuente */
+  padding: 78px;
+}
+
+.pagination label {
+  margin-right: 10px;
+  font-size: 1rem;
+}
+
+.pagination select {
+  margin-right: 20px;
+  padding: 4px;
+  font-size: 0.8rem;
+  height: 30px;
+}
+
+.pagination button {
+  background-color: #2778bf;
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  margin: 0 5px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 13px;
+  height: 30px;
+  transition: background 0.3s;
+}
+
+.pagination button:hover {
+  background-color: #4385be;
+}
+
+
+.pagination button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  margin: 0 10px;
+  font-size: 1rem;
+}
+
+.modal-body p {
+  word-wrap: break-word; /* Permite que las palabras largas se dividan en varias líneas */
+  overflow-wrap: break-word; /* Asegura que el texto se ajuste al contenedor */
+  white-space: pre-wrap; /* Mantiene los saltos de línea y ajusta el texto al ancho del contenedor */
+}
+
+.modal-body {
+    max-height: 400px; /* Limita la altura máxima del contenido */
+    overflow-y: auto; /* Activa el scroll vertical si el contenido excede la altura */
+}
 
 @media (max-width: 768px) {
   .form-group {
