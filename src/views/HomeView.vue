@@ -58,13 +58,17 @@
                                   <button type="button" class="delete-button" @click="eliminarRow(index)">❌</button>
                               </div>
                               <hr>
-                              <div class="column-group">
+                              <div class="row-group">
                                   <div class="form-group small-width">
                                       <label>Negociador:</label>
                                       <select class="input-field" v-model="negociador" required>
                                           <option :value="null">Seleccione...</option>
                                           <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
                                       </select>
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Asunto:</label>
+                                      <input type="text" class="input-field" v-model="asunto">
                                   </div>
                               </div>
                               <div class="column-group">
@@ -182,7 +186,7 @@
                             <i 
                                 class="fa-solid fa-eye" 
                                 style="cursor: pointer; color: #2778bf;" 
-                                @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto)"
+                                @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto, sol.asunto)"
                             ></i>
                         </td>
                     </tr>
@@ -279,7 +283,7 @@
         <div class="modal-dialog modal-dialog-centered modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="detallesModalLabel">Detalles de la Solicitud</h5>
+                    <h5 class="modal-title" id="detallesModalLabel">{{asuntoTexto}}</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body" v-if="!detallesSolicitud || detallesSolicitud.length === 0">
@@ -330,6 +334,8 @@ const usuario_creador = ref("");
 
 const productos = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }]);
 const negociador = ref(null);
+const asunto = ref("");
+const asuntoTexto = ref("");
 const cuerpo_texto = ref("");
 const list_negociadores = ref([]);
 const list_solicitantes = ref([]);
@@ -369,6 +375,7 @@ const guardar_solicitud = async () => {
                 lista_productos: productos.value,
                 solicitante: usuario_creador.value,
                 negociador: negociador.value,
+                asunto: asunto.value,
                 cuerpo_texto: cuerpo_texto.value,
             },
             {
@@ -502,6 +509,7 @@ const changePage = async (newPosition) => {
 const limpiarCampos = () => {
     productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }];
     negociador.value = null;
+    asunto.value = "";
     cuerpo_texto.value = "";
 
     // Restablece el tamaño del textarea usando el ref
@@ -534,8 +542,9 @@ function autoExpand(event) {
 };
 
 // ✅ Función para mostrar los detalles en el modal
-function mostrarDetalles(detalles, cuerpo_texto) {
+function mostrarDetalles(detalles, cuerpo_texto, asunto) {
     detallesSolicitud.value = detalles;
+    asuntoTexto.value = asunto;
     cuerpoTexto.value = cuerpo_texto;
     modalDetallesInstance.value.show();
 };
