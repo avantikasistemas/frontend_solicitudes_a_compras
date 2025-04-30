@@ -1,8 +1,11 @@
 <template>
     <div class="container">
       <div class="header-container">
-        <img class="img-title" :src="logo" :alt="logo">
-        <h2>SOLICITUD DE COTIZACIONES A COMPRAS</h2>
+        <div class="header-left">
+          <img class="img-title" :src="logo" :alt="logo">
+          <h2>SOLICITUD A COMPRAS</h2>
+        </div>
+        <button class="logout-button" @click="confirmLogout">Cerrar sesión</button>
       </div>
 
       <!-- Acordeón de productos -->
@@ -81,7 +84,14 @@
                                         ref="textarea"
                                       ></textarea>
                                   </div>
-                                  <button type="submit" class="submit-button align-start">Registrar Solicitud</button>
+                                  <button 
+                                    type="submit" 
+                                    class="submit-button align-start" 
+                                    :disabled="isLoading"
+                                  >
+                                    <span v-if="isLoading" class="spinner"></span>
+                                    <span v-else>Registrar Solicitud</span>
+                                  </button>
                               </div>
                           </form>
                       </div>
@@ -187,6 +197,11 @@
                                 class="fa-solid fa-eye" 
                                 style="cursor: pointer; color: #2778bf;" 
                                 @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto, sol.asunto)"
+                            ></i>
+                            <i 
+                                class="fa-solid fa-file-lines" 
+                                style="cursor: pointer; color: #2778bf; margin-left: 10px;" 
+                                @click="mostrarHistorico(sol.historico)"
                             ></i>
                         </td>
                     </tr>
@@ -319,6 +334,48 @@
         </div>
     </div>
 
+    <!-- Modal para mostrar histórico -->
+    <div class="modal fade" id="historicoModal" tabindex="-1" aria-labelledby="historicoModalLabel" aria-hidden="true" ref="historicoModal">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="historicoModalLabel">Histórico de la Solicitud</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <ul v-if="historicoSolicitud.length > 0">
+                        <li v-for="(item, index) in historicoSolicitud" :key="index">
+                            <strong>{{ item.fecha }}:</strong> {{ item.descripcion }}
+                        </li>
+                    </ul>
+                    <p v-else>No hay datos en el histórico.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmación de cierre de sesión -->
+    <div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true" ref="logoutModal">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="logoutModalLabel">Confirmar cierre de sesión</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    ¿Está seguro de que desea cerrar sesión?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" @click="logout">Cerrar sesión</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 </template>
 
 <script setup>
@@ -345,12 +402,15 @@ const lista_estados_solicitud = ref([]);
 const modalInstance = ref(null);
 const modalErrorInstance = ref(null);
 const modalDetallesInstance = ref(null);
+const logoutModalInstance = ref(null);
+const historicoModalInstance = ref(null);
 
 const msg = ref("");
 const errorMsg = ref("");
 const detallesSolicitud = ref("");
 const cuerpoTexto = ref("");
 const textarea = ref(null);
+const historicoSolicitud = ref([]);
 
 const filtro_id_solicitud = ref("");
 const filtro_estado_solicitud = ref(null);
@@ -364,10 +424,12 @@ const position = ref(1);
 
 const token_status = ref(0);
 
+const isLoading = ref(false);
+
 const router = useRouter();
 
 const guardar_solicitud = async () => {
-
+    isLoading.value = true; // Activa el spinner y desactiva el botón
     try {
         const response = await axios.post(
             `${apiUrl}/guardar_solicitud`, 
@@ -391,7 +453,6 @@ const guardar_solicitud = async () => {
             limpiarCampos();
             mostrarSolicitudes();
         }
-
     } catch (error) {
         console.error('Error al cargar los datos:', error);
         modalErrorInstance.value.show();
@@ -403,6 +464,8 @@ const guardar_solicitud = async () => {
             token_status.value = error.response.status;
             errorMsg.value = error.response.data.detail;
         }
+    } finally {
+        isLoading.value = false; // Desactiva el spinner y habilita el botón
     }
 };
 
@@ -549,9 +612,26 @@ function mostrarDetalles(detalles, cuerpo_texto, asunto) {
     modalDetallesInstance.value.show();
 };
 
+// ✅ Función para mostrar el histórico en el modal
+const mostrarHistorico = (historico) => {
+    historicoSolicitud.value = historico.sort((a, b) => new Date(a.fecha) - new Date(b.fecha)); // Ordenar por fecha
+    if (!historicoModalInstance.value) {
+        historicoModalInstance.value = new Modal(historicoModal);
+    }
+    historicoModalInstance.value.show();
+};
+
 function logout() {
+  logoutModalInstance.value.hide();
   localStorage.clear();
   router.push('/'); // Redirigir al login
+};
+
+const confirmLogout = () => {
+    if (!logoutModalInstance.value) {
+        logoutModalInstance.value = new Modal(logoutModal);
+    }
+    logoutModalInstance.value.show();
 };
 
 // ✅ Función mounted que carga información ANTES de que la página renderice
@@ -598,6 +678,12 @@ onMounted(() => {
   margin: 20px 20px;
   display: flex;
   align-items: center;
+  justify-content: space-between; /* Separa los elementos a los extremos */
+}
+.header-left {
+  display: flex;
+  align-items: center; /* Alinea verticalmente la imagen y el título */
+  gap: 10px; /* Espaciado entre la imagen y el título */
 }
 .header-container h2{
   font-size: 1.3rem;
@@ -883,6 +969,41 @@ textarea.input-field {
 .modal-body {
     max-height: 400px; /* Limita la altura máxima del contenido */
     overflow-y: auto; /* Activa el scroll vertical si el contenido excede la altura */
+}
+
+.logout-button {
+    background-color: #2778bf; /* Azul similar a otros elementos */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.3s;
+}
+
+.logout-button:hover {
+    background-color: #4385be; /* Azul más claro al pasar el cursor */
+}
+
+.spinner {
+    border: 2px solid #f3f3f3; /* Color gris claro */
+    border-top: 2px solid #2778bf; /* Azul */
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 @media (max-width: 768px) {

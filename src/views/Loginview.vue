@@ -11,7 +11,19 @@
                 <input type="text" id="username" v-model="username" required>
 
                 <label for="password">Contraseña:</label>
-                <input type="password" id="password" v-model="password" required>
+                <div class="password-container">
+                    <input 
+                        :type="showPassword ? 'text' : 'password'" 
+                        id="password" 
+                        v-model="password" 
+                        required
+                    >
+                    <i 
+                        :class="showPassword ? 'fa fa-eye-slash' : 'fa fa-eye'" 
+                        class="toggle-password" 
+                        @click="togglePasswordVisibility"
+                    ></i>
+                </div>
 
                 <button type="submit" @click="login">Ingresar</button>
             </form>
@@ -30,11 +42,15 @@ import logo from "@/assets/logo.png";
 
 const username = ref("");
 const password = ref("");
+const showPassword = ref(false);
 
 const errorMessage = ref("");
 
 const router = useRouter();
 
+const togglePasswordVisibility = () => {
+    showPassword.value = !showPassword.value;
+};
 
 // Función de inicio de sesión
 const login = async () => {
@@ -159,5 +175,28 @@ button:hover {
     font-size: 14px;
     margin-top: 10px;
     display: none;
+}
+
+.password-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-container input {
+    flex: 1;
+}
+
+.toggle-password {
+    position: absolute;
+    right: 10px;
+    cursor: pointer;
+    color: #888;
+    font-size: 1.2em;
+    transition: color 0.3s;
+}
+
+.toggle-password:hover {
+    color: #2778bf;
 }
 </style>
