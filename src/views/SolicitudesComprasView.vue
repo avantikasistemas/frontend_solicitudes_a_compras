@@ -3,7 +3,7 @@
       <div class="header-container">
         <div class="header-left">
           <img class="img-title" :src="logo" :alt="logo">
-          <h2>SOLICITUDES</h2>
+          <h2>SOLICITUDES - MACROPROCESO DE ABASTECIMIENTO</h2>
         </div>
         <button class="logout-button" @click="confirmLogout">Cerrar sesión</button>
       </div>
@@ -102,7 +102,7 @@
                             <i 
                                 class="fa-solid fa-eye" 
                                 style="cursor: pointer; color: #ffc300;" 
-                                @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto, sol.asunto)"
+                                @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto, sol.asunto, sol.id, sol.estado_solicitud, sol.fecha_resuelto, sol.comentario_resuelto)"
                             ></i>
                             <i 
                                 class="fa-solid fa-file-lines" 
@@ -162,7 +162,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exitoModalLabel">Modal Formación</h5>
+                    <h5 class="modal-title" id="exitoModalLabel">Modal</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -205,7 +205,7 @@
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="detallesModalLabel">{{asuntoTexto}}</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close" @click="resetCamposModal"></button>
                 </div>
                 <div class="modal-body" v-if="!detallesSolicitud || detallesSolicitud.length === 0">
                     <p>No hay detalles.</p>
@@ -232,9 +232,62 @@
                         </tbody>
                     </table>
                     <p>{{cuerpoTexto}}</p>
+                    <hr>
+                    <!-- Mostrar detalles de resuelto si el estado es 4 -->
+                    <div v-if="estadoSolicitud === 4">
+                        <p><strong>Fecha de Resuelto:</strong> {{ fechaResuelto }}</p>
+                        <p><strong>Mensaje de Resuelto:</strong> {{ mensajeResuelto }}</p>
+                    </div>
+                    <!-- Mostrar opciones de actualización si el estado no es 4 -->
+                    <div v-else>
+                        <!-- Nueva fila para seleccionar y actualizar negociador -->
+                        <div class="row-group">
+                            <div class="form-group small-width">
+                                <label for="negociadorSelect">Negociador:</label>
+                                <select id="negociadorSelect" class="input-field" v-model="nuevoNegociador">
+                                    <option :value="null">Seleccione...</option>
+                                    <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
+                                </select>
+                            </div>
+                            <button 
+                                class="actualizar-negociador-button align-start" 
+                                @click="actualizarNegociador()"
+                            >
+                                Actualizar Negociador
+                            </button>
+                        </div>
+                        <hr>
+                        <!-- Nueva fila para seleccionar y actualizar estado -->
+                        <div class="row-group">
+                            <div class="form-group small-width">
+                                <label for="estadoSelect">Estado:</label>
+                                <select id="estadoSelect" class="input-field" v-model="nuevoEstado" @change="handleEstadoChange">
+                                    <option :value="null">Seleccione...</option>
+                                    <option v-for="estado in lista_estados_solicitud" :value="estado.id">{{ estado.nombre }}</option>
+                                </select>
+                            </div>
+                            <button 
+                                class="actualizar-estado-button align-start" 
+                                @click="actualizarEstado()"
+                            >
+                                Actualizar Estado
+                            </button>
+                        </div>
+                        <!-- Campos adicionales para estado "Resuelto" -->
+                        <div v-if="nuevoEstado === 4" class="column-group">
+                            <div class="form-group">
+                                <label for="fechaResuelto">Fecha de Resuelto:</label>
+                                <input type="date" id="fechaResuelto" class="input-field" v-model="fechaResuelto" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="mensajeResuelto">Mensaje de Resuelto:</label>
+                                <textarea id="mensajeResuelto" class="input-field" v-model="mensajeResuelto" required></textarea>
+                            </div>
+                        </div>
+                    </div>      
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" @click="resetCamposModal">Cerrar</button>
                 </div>
             </div>
         </div>
@@ -296,6 +349,7 @@ const token = ref("");
 const usuario_creador = ref("");
 const token_status = ref(0);
 
+const solicitudId = ref(null);
 const asuntoTexto = ref("");
 const list_negociadores = ref([]);
 const list_solicitantes = ref([]);
@@ -325,6 +379,12 @@ const limit = ref(15);
 const position = ref(1);
 
 const isLoading = ref(false);
+
+const nuevoNegociador = ref(null);
+const nuevoEstado = ref(null);
+const fechaResuelto = ref(null);
+const mensajeResuelto = ref("");
+const estadoSolicitud = ref(null);
 
 const router = useRouter();
 
@@ -460,18 +520,22 @@ const changePage = async (newPosition) => {
 };
 
 const limpiarCamposFiltro = async () => {
-  filtro_id_solicitud.value = "";
-  filtro_estado_solicitud.value = null;
-  filtro_solicitante.value = null;
-  filtro_negociador.value = null;
-  await mostrarSolicitudes();
+    filtro_id_solicitud.value = "";
+    filtro_estado_solicitud.value = null;
+    filtro_solicitante.value = null;
+    filtro_negociador.value = null;
+    await mostrarSolicitudes();
 };
 
 // ✅ Función para mostrar los detalles en el modal
-function mostrarDetalles(detalles, cuerpo_texto, asunto) {
+function mostrarDetalles(detalles, cuerpo_texto, asunto, solicitud_id, estado, fecha_resuelto, mensaje_resuelto) {
+    solicitudId.value = solicitud_id;
     detallesSolicitud.value = detalles;
     asuntoTexto.value = asunto;
     cuerpoTexto.value = cuerpo_texto;
+    estadoSolicitud.value = estado;
+    fechaResuelto.value = fecha_resuelto || null; 
+    mensajeResuelto.value = mensaje_resuelto || "";
     modalDetallesInstance.value.show();
 };
 
@@ -503,6 +567,113 @@ const confirmLogout = () => {
         logoutModalInstance.value = new Modal(logoutModal);
     }
     logoutModalInstance.value.show();
+};
+
+const actualizarNegociador = async () => {
+    if (!nuevoNegociador.value) {
+        alert("Por favor seleccione un negociador.");
+        return;
+    }
+
+    try {
+        const response = await axios.post(
+            `${apiUrl}/actualizar_negociador`, 
+            {
+                solicitud_id: solicitudId.value,
+                nuevo_negociador: nuevoNegociador.value,
+                usuario_creador: usuario_creador.value
+            },
+            {
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`,
+                },
+            }
+        );
+        if (response.status === 200) {
+            msg.value = response.data.message;
+            // modalInstance.value.show();
+            alert(msg.value);
+            await mostrarSolicitudes();
+        }
+    } catch (error) {
+        console.error('Error al cargar los datos:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+        if (error.response.status === 401) {
+          token_status.value = error.response.status;
+          errorMsg.value = error.response.data.detail;
+        } else if (error.response.status === 403) {
+            token_status.value = error.response.status;
+            errorMsg.value = error.response.data.detail;
+        }
+    }
+};
+
+const resetCamposModal = () => {
+    nuevoNegociador.value = null;
+    nuevoEstado.value = null;
+    fechaResuelto.value = null;
+    mensajeResuelto.value = "";
+};
+
+const handleEstadoChange = () => {
+    if (nuevoEstado.value !== 4) {
+        // Limpiar campos si no es "Resuelto"
+        fechaResuelto.value = null;
+        mensajeResuelto.value = "";
+    }
+};
+
+const actualizarEstado = async () => {
+    if (nuevoEstado.value === 4 && (!fechaResuelto.value || !mensajeResuelto.value)) {
+        alert("Por favor complete todos los campos requeridos para el estado 'Resuelto'.");
+        return;
+    }
+
+    if (!nuevoEstado.value) {
+        alert("Por favor seleccione un estado.");
+        return;
+    }
+
+    // Obtener el texto del estado seleccionado
+    const estadoSeleccionado = lista_estados_solicitud.value.find(estado => estado.id === nuevoEstado.value);
+
+    try {
+        const response = await axios.post(
+            `${apiUrl}/actualizar_estado`, 
+            {
+                solicitud_id: solicitudId.value,
+                nuevo_estado: nuevoEstado.value,
+                texto_estado: estadoSeleccionado ? estadoSeleccionado.nombre : null, // Enviar el texto del estado
+                fecha_resuelto: nuevoEstado.value === 4 ? fechaResuelto.value : null,
+                comentario_resuelto: nuevoEstado.value === 4 ? mensajeResuelto.value : '',
+                usuario_creador: usuario_creador.value
+            },
+            {
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`,
+                },
+            }
+        );
+        if (response.status === 200) {
+            msg.value = response.data.message;
+            alert(msg.value);
+            await mostrarSolicitudes();
+        }
+    } catch (error) {
+        console.error('Error al cargar los datos:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+        if (error.response.status === 401) {
+          token_status.value = error.response.status;
+          errorMsg.value = error.response.data.detail;
+        } else if (error.response.status === 403) {
+            token_status.value = error.response.status;
+            errorMsg.value = error.response.data.detail;
+        }
+    }
 };
 
 // ✅ Función mounted que carga información ANTES de que la página renderice
@@ -562,8 +733,8 @@ onMounted(() => {
 }
 
 .logout-button {
-    background-color: #ffc300; /* Azul similar a otros elementos */
-    color: white;
+    background-color: #ffd95e; /* Azul similar a otros elementos */
+    color: black;
     border: none;
     padding: 8px 16px;
     border-radius: 5px;
@@ -634,20 +805,21 @@ onMounted(() => {
   border-radius: 4px;
 }
 
-.submit-button {
-  width: 100%;
-  margin-top: 10px;
-  padding: 10px;
-  background: #ffc300;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-  transition: background 0.3s;
-  font-size: 0.9em;
+.submit-button,
+.actualizar-negociador-button {
+    width: auto; /* Ajusta el ancho al contenido */
+    padding: 8px 16px; /* Tamaño similar al botón de limpiar */
+    background: #ffd95e;
+    color: black;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+    font-size: 0.9em;
 }
 
-.submit-button:hover {
+.submit-button:hover,
+.actualizar-negociador-button:hover {
   background: #ffd858;
 }
 
@@ -696,18 +868,18 @@ table {
 }
 /* Dejar fija la cabecera */
 thead {
-    position: sticky;
+    /* position: sticky; */
     top: 0;
     background-color: #e5e7eb; /* Fijar color de fondo para que no sea transparente */
     z-index: 10; /* Asegurar que esté sobre el contenido */
 }
 th {
-    background-color: #ffc300; /* Nuevo color para el encabezado de la tabla */
+    background-color: #fff7dd;; /* Nuevo color para el encabezado de la tabla */
     color: black; /* Asegura que el texto sea legible */
 }
 
 .modal-body table th {
-    background-color: #ffc300; /* Nuevo color para el encabezado de la tabla dentro del modal */
+    background-color: #fff7dd; /* Nuevo color para el encabezado de la tabla dentro del modal */
     color: black; /* Asegura que el texto sea legible */
 }
 
@@ -753,9 +925,25 @@ textarea.input-field {
   resize: none; /* Evita que el usuario cambie el tamaño del textarea */
 }
 
-.submit-button {
+.actualizar-negociador-button {
   width: auto; /* Ajusta el ancho del botón al contenido */
-  align-self: flex-start; /* Alinea el botón al inicio */
+  align-self: flex-end; /* Alinea el botón al inicio */
+}
+
+.actualizar-estado-button {
+    width: auto; /* Ajusta el ancho al contenido */
+    padding: 8px 16px; /* Tamaño similar al botón de limpiar */
+    background: #ffd95e;
+    color: black;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s;
+    font-size: 0.9em;
+}
+
+.actualizar-estado-button:hover {
+    background: #ffd858;
 }
 
 .pagination {
@@ -781,7 +969,7 @@ textarea.input-field {
 }
 
 .pagination button {
-  background-color: #ffc300;
+  background-color: #ffd95e;
   color: black;
   border: none;
   padding: 4px 8px;

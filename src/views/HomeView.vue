@@ -3,7 +3,7 @@
       <div class="header-container">
         <div class="header-left">
           <img class="img-title" :src="logo" :alt="logo">
-          <h2>SOLICITUD A COMPRAS</h2>
+          <h2>SOLICITUDES - MACROPROCESO DE COTIZACIONES</h2>
         </div>
         <button class="logout-button" @click="confirmLogout">Cerrar sesión</button>
       </div>
@@ -196,7 +196,7 @@
                             <i 
                                 class="fa-solid fa-eye" 
                                 style="cursor: pointer; color: #2778bf;" 
-                                @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto, sol.asunto)"
+                                @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto, sol.asunto, sol.estado_solicitud, sol.fecha_resuelto, sol.comentario_resuelto)"
                             ></i>
                             <i 
                                 class="fa-solid fa-file-lines" 
@@ -326,6 +326,12 @@
                         </tbody>
                     </table>
                     <p>{{cuerpoTexto}}</p>
+                    <hr>
+                    <!-- Mostrar detalles de resuelto si el estado es 4 -->
+                    <div v-if="estadoSolicitud === 4">
+                        <p><strong>Fecha de Resuelto:</strong> {{ fechaResuelto }}</p>
+                        <p><strong>Mensaje de Resuelto:</strong> {{ mensajeResuelto }}</p>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
@@ -398,6 +404,9 @@ const list_negociadores = ref([]);
 const list_solicitantes = ref([]);
 const lista_solicitudes = ref([]);
 const lista_estados_solicitud = ref([]);
+const fechaResuelto = ref(null);
+const mensajeResuelto = ref("");
+const estadoSolicitud = ref(null);
 
 const modalInstance = ref(null);
 const modalErrorInstance = ref(null);
@@ -636,10 +645,13 @@ function autoExpand(event) {
 };
 
 // ✅ Función para mostrar los detalles en el modal
-function mostrarDetalles(detalles, cuerpo_texto, asunto) {
+function mostrarDetalles(detalles, cuerpo_texto, asunto, estado, fecha_resuelto, mensaje_resuelto) {
     detallesSolicitud.value = detalles;
     asuntoTexto.value = asunto;
     cuerpoTexto.value = cuerpo_texto;
+    estadoSolicitud.value = estado;
+    fechaResuelto.value = fecha_resuelto || null; 
+    mensajeResuelto.value = mensaje_resuelto || "";
     modalDetallesInstance.value.show();
 };
 
@@ -874,7 +886,7 @@ table {
 }
 /* Dejar fija la cabecera */
 thead {
-    position: sticky;
+    /* position: sticky; */
     top: 0;
     background-color: #e5e7eb; /* Fijar color de fondo para que no sea transparente */
     z-index: 10; /* Asegurar que esté sobre el contenido */
