@@ -3,103 +3,9 @@
       <div class="header-container">
         <div class="header-left">
           <img class="img-title" :src="logo" :alt="logo">
-          <h2>SOLICITUD A COMPRAS</h2>
+          <h2>SOLICITUDES</h2>
         </div>
         <button class="logout-button" @click="confirmLogout">Cerrar sesión</button>
-      </div>
-
-      <!-- Acordeón de productos -->
-      <div class="accordion" id="productosAccordion">
-          <div class="accordion-item" style="margin: 20px 20px;">
-            <h2 class="accordion-header" id="headingProductos">
-                <button 
-                    class="accordion-button collapsed" 
-                    type="button" 
-                    data-bs-toggle="collapse" 
-                    data-bs-target="#collapseProductos" 
-                    aria-expanded="false" 
-                    aria-controls="collapseProductos"
-                    >
-                    Productos
-                </button>
-            </h2>
-            <div 
-                id="collapseProductos" 
-                class="accordion-collapse collapse" 
-                aria-labelledby="headingProductos" 
-                data-bs-parent="#productosAccordion"
-            >
-                <div class="accordion-body">
-                    <div class="filter-container">
-                      <div class="form-container">
-                        <!-- Botón redondo flotante -->
-                        <button class="round-button" @click="agregarRow">
-                            <i class="fa-solid fa-plus"></i>
-                        </button>
-                          <form @submit.prevent="guardar_solicitud" class="form-flex">
-                              <div v-for="(row, index) in productos" :key="index" class="row-group">
-                                  <div class="form-group">
-                                      <label>Referencia:</label>
-                                      <input type="text" class="input-field" v-model="row.referencia">
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Descripción:</label>
-                                      <input type="text" class="input-field" v-model="row.producto">
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Cantidad:</label>
-                                      <input type="number" class="input-field" v-model="row.cantidad" required>
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Proveedor:</label>
-                                      <input type="text" class="input-field" v-model="row.proveedor">
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Marca:</label>
-                                      <input type="text" class="input-field" v-model="row.marca">
-                                  </div>
-                                  <button type="button" class="delete-button" @click="eliminarRow(index)">❌</button>
-                              </div>
-                              <hr>
-                              <div class="row-group">
-                                  <div class="form-group small-width">
-                                      <label>Negociador:</label>
-                                      <select class="input-field" v-model="negociador" required>
-                                          <option :value="null">Seleccione...</option>
-                                          <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
-                                      </select>
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Asunto:</label>
-                                      <input type="text" class="input-field" v-model="asunto">
-                                  </div>
-                              </div>
-                              <div class="column-group">
-                                  <div class="form-group">
-                                      <label>Cuerpo del mensaje:</label>
-                                      <textarea 
-                                        class="input-field" 
-                                        v-model="cuerpo_texto" 
-                                        @input="autoExpand($event)"
-                                        ref="textarea"
-                                      ></textarea>
-                                  </div>
-                                  <button 
-                                    type="submit" 
-                                    class="submit-button align-start" 
-                                    :disabled="isLoading"
-                                  >
-                                    <span v-if="isLoading" class="spinner"></span>
-                                    <span v-else>Registrar Solicitud</span>
-                                  </button>
-                              </div>
-                          </form>
-                      </div>
-                        
-                    </div>
-                </div>
-            </div>
-          </div>
       </div>
 
       <!-- Acordeón de filtros -->
@@ -195,12 +101,12 @@
                         <td>
                             <i 
                                 class="fa-solid fa-eye" 
-                                style="cursor: pointer; color: #2778bf;" 
+                                style="cursor: pointer; color: #ffc300;" 
                                 @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto, sol.asunto)"
                             ></i>
                             <i 
                                 class="fa-solid fa-file-lines" 
-                                style="cursor: pointer; color: #2778bf; margin-left: 10px;" 
+                                style="cursor: pointer; color: #ffc300; margin-left: 10px;" 
                                 @click="mostrarHistorico(sol.historico)"
                             ></i>
                         </td>
@@ -388,12 +294,9 @@ import logo from "@/assets/logo.png";
 
 const token = ref("");
 const usuario_creador = ref("");
+const token_status = ref(0);
 
-const productos = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }]);
-const negociador = ref(null);
-const asunto = ref("");
 const asuntoTexto = ref("");
-const cuerpo_texto = ref("");
 const list_negociadores = ref([]);
 const list_solicitantes = ref([]);
 const lista_solicitudes = ref([]);
@@ -402,14 +305,13 @@ const lista_estados_solicitud = ref([]);
 const modalInstance = ref(null);
 const modalErrorInstance = ref(null);
 const modalDetallesInstance = ref(null);
-const logoutModalInstance = ref(null);
 const historicoModalInstance = ref(null);
 
 const msg = ref("");
 const errorMsg = ref("");
 const detallesSolicitud = ref("");
 const cuerpoTexto = ref("");
-const textarea = ref(null);
+const logoutModalInstance = ref(null);
 const historicoSolicitud = ref([]);
 
 const filtro_id_solicitud = ref("");
@@ -422,52 +324,9 @@ const total_registros = ref(0);
 const limit = ref(15);
 const position = ref(1);
 
-const token_status = ref(0);
-
 const isLoading = ref(false);
 
 const router = useRouter();
-
-const guardar_solicitud = async () => {
-    isLoading.value = true; // Activa el spinner y desactiva el botón
-    try {
-        const response = await axios.post(
-            `${apiUrl}/guardar_solicitud`, 
-            {
-                lista_productos: productos.value,
-                solicitante: usuario_creador.value,
-                negociador: negociador.value,
-                asunto: asunto.value,
-                cuerpo_texto: cuerpo_texto.value,
-            },
-            {
-                headers: {
-                    Accept: "application/json",
-                    Authorization: `Bearer ${token.value}`
-                }
-            }
-        );
-        if (response.status === 200) {
-            msg.value = response.data.message;
-            modalInstance.value.show();
-            limpiarCampos();
-            mostrarSolicitudes();
-        }
-    } catch (error) {
-        console.error('Error al cargar los datos:', error);
-        modalErrorInstance.value.show();
-        errorMsg.value = error.response.data.message;
-        if (error.response.status === 401) {
-          token_status.value = error.response.status;
-          errorMsg.value = error.response.data.detail;
-        } else if (error.response.status === 403) {
-            token_status.value = error.response.status;
-            errorMsg.value = error.response.data.detail;
-        }
-    } finally {
-        isLoading.value = false; // Desactiva el spinner y habilita el botón
-    }
-};
 
 const cargarDatos = async () => {
     try {
@@ -600,39 +459,12 @@ const changePage = async (newPosition) => {
   await mostrarSolicitudes(); // Vuelve a cargar los datos con el nuevo límite y posición
 };
 
-const limpiarCampos = () => {
-    productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }];
-    negociador.value = null;
-    asunto.value = "";
-    cuerpo_texto.value = "";
-
-    // Restablece el tamaño del textarea usando el ref
-    if (textarea.value) {
-        textarea.value.style.height = "auto"; // vuelve al tamaño original
-    }
-};
-
 const limpiarCamposFiltro = async () => {
   filtro_id_solicitud.value = "";
   filtro_estado_solicitud.value = null;
   filtro_solicitante.value = null;
   filtro_negociador.value = null;
   await mostrarSolicitudes();
-};
-
-function agregarRow() {
-    productos.value.push({ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" });
-};
-
-function eliminarRow(index) {
-    productos.value.splice(index, 1);
-};
-
-// ✅ Función para expandir automáticamente el textarea
-function autoExpand(event) {
-  const textarea = event.target;
-  textarea.style.height = "auto"; // Restablece la altura
-  textarea.style.height = `${textarea.scrollHeight}px`; // Ajusta la altura al contenido
 };
 
 // ✅ Función para mostrar los detalles en el modal
@@ -655,7 +487,7 @@ const mostrarHistorico = (historico) => {
 function logout() {
     try {
         localStorage.clear();
-        router.push('/'); // Redirigir al login
+        router.push('/login-compras'); // Redirigir al login
         
     } catch (error) {
         console.error(error)
@@ -675,6 +507,7 @@ const confirmLogout = () => {
 
 // ✅ Función mounted que carga información ANTES de que la página renderice
 onMounted(() => {
+
   token.value = localStorage.getItem("token");
   usuario_creador.value = localStorage.getItem("usuario_creador");
 
@@ -683,7 +516,7 @@ onMounted(() => {
   modalDetallesInstance.value = new Modal(detallesModal);
 
   if (!token.value) {
-      router.push('/'); // Redirigir al login si no hay token
+      router.push('/login-compras'); // Redirigir al login si no hay token
   }
 
   cargarDatos();
@@ -728,6 +561,21 @@ onMounted(() => {
   font-size: 1.3rem;
 }
 
+.logout-button {
+    background-color: #ffc300; /* Azul similar a otros elementos */
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background 0.3s;
+}
+
+.logout-button:hover {
+    background-color: #ffd858; /* Azul más claro al pasar el cursor */
+}
+
 .accordion {
   margin-top: 1px;
 }
@@ -739,32 +587,6 @@ onMounted(() => {
 
 .accordion-body .filter-container h2 {
     font-size: 1.2rem;
-}
-
-/* Botón redondo */
-.round-button {
-    position: fixed;
-    right: 30px;
-    top: 130px;
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    background-color: #2778bf;
-    color: white;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.3s ease;
-}
-
-.round-button:hover {
-    background-color: #4385be;
-    transform: scale(1.1);
 }
 
 .img-title {
@@ -816,7 +638,7 @@ onMounted(() => {
   width: 100%;
   margin-top: 10px;
   padding: 10px;
-  background: #2778bf;
+  background: #ffc300;
   color: white;
   border: none;
   border-radius: 5px;
@@ -826,7 +648,7 @@ onMounted(() => {
 }
 
 .submit-button:hover {
-  background: #4385be;
+  background: #ffd858;
 }
 
 .clean-button {
@@ -880,13 +702,13 @@ thead {
     z-index: 10; /* Asegurar que esté sobre el contenido */
 }
 th {
-    background-color: #2778bf; /* Nuevo color para el encabezado de la tabla */
-    color: white; /* Asegura que el texto sea legible */
+    background-color: #ffc300; /* Nuevo color para el encabezado de la tabla */
+    color: black; /* Asegura que el texto sea legible */
 }
 
 .modal-body table th {
-    background-color: #2778bf; /* Nuevo color para el encabezado de la tabla dentro del modal */
-    color: white; /* Asegura que el texto sea legible */
+    background-color: #ffc300; /* Nuevo color para el encabezado de la tabla dentro del modal */
+    color: black; /* Asegura que el texto sea legible */
 }
 
 th, td {
@@ -936,19 +758,6 @@ textarea.input-field {
   align-self: flex-start; /* Alinea el botón al inicio */
 }
 
-.delete-button {
-  background: white;
-  border: none;
-  border-radius: 5px;
-  padding: 8px;
-  cursor: pointer;
-  transition: background 0.3s;
-}
-
-.delete-button:hover {
-  background: #ffc4c4;
-}
-
 .pagination {
   display: flex;
   justify-content: center;
@@ -972,8 +781,8 @@ textarea.input-field {
 }
 
 .pagination button {
-  background-color: #2778bf;
-  color: white;
+  background-color: #ffc300;
+  color: black;
   border: none;
   padding: 4px 8px;
   margin: 0 5px;
@@ -985,7 +794,7 @@ textarea.input-field {
 }
 
 .pagination button:hover {
-  background-color: #4385be;
+  background-color: #ffd858;
 }
 
 
@@ -1008,41 +817,6 @@ textarea.input-field {
 .modal-body {
     max-height: 400px; /* Limita la altura máxima del contenido */
     overflow-y: auto; /* Activa el scroll vertical si el contenido excede la altura */
-}
-
-.logout-button {
-    background-color: #2778bf; /* Azul similar a otros elementos */
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background 0.3s;
-}
-
-.logout-button:hover {
-    background-color: #4385be; /* Azul más claro al pasar el cursor */
-}
-
-.spinner {
-    border: 2px solid #f3f3f3; /* Color gris claro */
-    border-top: 2px solid #2778bf; /* Azul */
-    border-radius: 50%;
-    width: 16px;
-    height: 16px;
-    animation: spin 1s linear infinite;
-    display: inline-block;
-    margin-right: 8px;
-}
-
-@keyframes spin {
-    0% {
-        transform: rotate(0deg);
-    }
-    100% {
-        transform: rotate(360deg);
-    }
 }
 
 @media (max-width: 768px) {

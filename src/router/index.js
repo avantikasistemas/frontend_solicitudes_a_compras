@@ -1,34 +1,36 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Loginview from '@/views/Loginview.vue';
-import HomeView from '@/views/HomeView.vue';
-// import RegistroView from '@/views/RegistroView.vue';
-// import FormacionesView from '@/views/FormacionesView.vue';
-// import EditarFormacion from '@/views/EditarFormacion.vue';
-// import ConsultasView from '@/views/ConsultasView.vue';
+import Loginview from '@/views/Loginview.vue'
+import HomeView from '@/views/HomeView.vue'
+import SolicitudesComprasView from '@/views/SolicitudesComprasView.vue'
+import LoginComprasView from '@/views/LoginComprasView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    {path: '/', name: 'login', component: Loginview},
+    {path: '/', name: 'login', component: Loginview, meta: { public: true }},
     {path: '/solicitudes', name: 'solicitudes', component: HomeView},
-    // {path: '/formaciones', name: 'formaciones', component: FormacionesView},
-    // {path: '/editar-formacion/:id', name: 'editar-formacion', component: EditarFormacion, props: true},
-    // {path: '/consultas/', name: 'consultas', component: ConsultasView},
+    {path: '/login-compras', name: 'login-compras', component: LoginComprasView, meta: { public: true }},
+    {path: '/solicitudes-compras', name: 'solicitudes-compras', component: SolicitudesComprasView}
   ]
 })
 
+// Middleware de autenticación
 router.beforeEach((to, from, next) => {
   const token = localStorage.getItem('token');
-  // Si no se requiere autenticación (por ejemplo, en la ruta de login), continúa
-  if (to.path === '/' || to.name === 'login') {
-    next();
+  const isPublic = to.meta.public === true;
+
+  if (isPublic) {
+    next(); // Ruta pública, permitir acceso
   } else {
-    // Si se requiere autenticación y no hay token, redirigir al login
     if (!token) {
-      next({ name: 'login' }); // Redirigir a la ruta de login si no hay token
+      // Si la ruta protegida es 'solicitudes-compras', redirigir a login-compras
+      if (to.name === 'solicitudes-compras') {
+        next({ name: 'login-compras' });
+      } else {
+        next({ name: 'login' }); // Resto de rutas, redirigir al login por defecto
+      }
     } else {
-      // Si hay token, permitir la navegación
-      next();
+      next(); // Token presente, permitir navegación
     }
   }
 });
