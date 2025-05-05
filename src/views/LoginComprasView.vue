@@ -117,7 +117,7 @@ body {
 }
 
 .header-title h2 {
-  color: #ffc300;
+  color: #ffd95e;
 }
 
 .img-title {
@@ -150,7 +150,7 @@ button {
     width: 100%;
     margin-top: 10px;
     padding: 10px;
-    background: #ffc300;
+    background: #ffd95e;
     color: white;
     border: none;
     border-radius: 5px;
@@ -160,7 +160,7 @@ button {
 }
 
 button:hover {
-    background: #ffd858;
+    background: #ffd343;
 }
 
 .error-message {
