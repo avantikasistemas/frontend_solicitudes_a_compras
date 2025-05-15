@@ -5,11 +5,89 @@
           <img class="img-title" :src="logo" :alt="logo">
           <h2>SOLICITUDES - MACROPROCESO DE COTIZACIONES</h2>
         </div>
-        <button class="logout-button" @click="confirmLogout">Cerrar sesión</button>
+        <!-- Solo el botón de cerrar sesión queda aquí -->
+        <div class="header-buttons">
+          <button class="logout-button" @click="confirmLogout">Cerrar sesión</button>
+        </div>
       </div>
 
-      <!-- Acordeón de productos -->
-      <div class="accordion" id="productosAccordion">
+      <!-- NUEVO: Campos de negociador, asunto y cuerpo del mensaje arriba del input file -->
+      <div class="form-flex" style="margin: 20px 20px 0 20px;">
+        <div class="row-group">
+          <div class="form-group small-width" :class="{ 'error': (!negociador && mostrarErrores)}">
+            <label>Negociador:</label>
+            <select class="input-field" v-model="negociador">
+              <option :value="null">Seleccione...</option>
+              <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
+            </select>
+            <p v-if="!negociador && mostrarErrores" class="error-text">Este campo es obligatorio.</p>
+          </div>
+          <div class="form-group" :class="{ 'error': (!asunto && mostrarErrores)}" >
+            <label>Asunto:</label>
+            <input type="text" class="input-field" v-model="asunto">
+            <p v-if="!asunto && mostrarErrores" class="error-text">Este campo es obligatorio.</p>
+          </div>
+        </div>
+        <div class="column-group">
+          <div class="form-group" :class="{ 'error': (!cuerpo_texto && mostrarErrores)}">
+            <label>Cuerpo del mensaje:</label>
+            <textarea 
+              class="input-field" 
+              v-model="cuerpo_texto" 
+              @input="autoExpand($event)"
+              ref="textarea"
+            ></textarea>
+            <p v-if="!cuerpo_texto && mostrarErrores" class="error-text">Este campo es obligatorio.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inputs de archivo y botón cargar, ocultar si el checkbox está activo -->
+      <div 
+        v-if="!mostrarAcordeonProductos"
+        style="display: flex; align-items: center; margin: 20px 20px;"
+      >
+        <input 
+          type="file" 
+          class="form-control"
+          ref="fileInput"
+          @change="onFileChange"
+          style="margin-right: 10px;"
+        >
+        <!-- Botón de descargar template a la derecha del input file -->
+        <button 
+          class="logout-button template-button" 
+          style="height: 38px; margin-right: 10px;" 
+          @click="descargarArchivo"
+        >
+          Descargar Template
+        </button>
+        <button 
+          class="logout-button" 
+          style="height: 38px; margin-right: 10px;" 
+          @click="procesarArchivo"
+          :disabled="!archivoSeleccionado"
+        >
+          Cargar
+        </button>
+        <!-- Icono de ojo solo si productos tiene datos -->
+        <i 
+          v-if="productos && productos.length > 0 && productos.some(p => p.referencia || p.producto || p.cantidad || p.proveedor || p.marca)" 
+          class="fa-solid fa-eye" 
+          style="color: #2778bf; font-size: 20px; margin-left: 12px; cursor: pointer;"
+          title="Productos cargados"
+          @click="abrirModalProductos"
+        ></i>
+      </div>
+
+      <!-- Checkbox para habilitar el acordeón de productos -->
+      <div style="margin: 20px 20px 0 20px; display: flex; align-items: center;">
+        <input type="checkbox" id="habilitarProductos" v-model="mostrarAcordeonProductos" style="margin-right: 8px;">
+        <label for="habilitarProductos" style="margin: 0;">Habilitar productos manualmente</label>
+      </div>
+
+      <!-- Acordeón de productos solo si el checkbox está activo -->
+      <div v-if="mostrarAcordeonProductos" class="accordion" id="productosAccordion">
           <div class="accordion-item" style="margin: 20px 20px;">
             <h2 class="accordion-header" id="headingProductos">
                 <button 
@@ -32,58 +110,48 @@
                 <div class="accordion-body">
                     <div class="filter-container">
                       <div class="form-container">
-                        <!-- Botón redondo flotante -->
-                        <button class="round-button" @click="agregarRow">
-                            <i class="fa-solid fa-plus"></i>
-                        </button>
-                          <form @submit.prevent="guardar_solicitud" class="form-flex">
-                              <div v-for="(row, index) in productos" :key="index" class="row-group">
-                                  <div class="form-group">
-                                      <label>Referencia:</label>
-                                      <input type="text" class="input-field" v-model="row.referencia">
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Descripción:</label>
-                                      <input type="text" class="input-field" v-model="row.producto">
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Cantidad:</label>
-                                      <input type="number" class="input-field" v-model="row.cantidad" required>
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Proveedor:</label>
-                                      <input type="text" class="input-field" v-model="row.proveedor">
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Marca:</label>
-                                      <input type="text" class="input-field" v-model="row.marca">
-                                  </div>
-                                  <button type="button" class="delete-button" @click="eliminarRow(index)">❌</button>
-                              </div>
+                          <form @submit.prevent="validarFormulario" class="form-flex">
+                              <table class="table table-bordered">
+                                <thead>
+                                  <tr>
+                                    <th>Referencia</th>
+                                    <th>Descripción</th>
+                                    <th>Cantidad</th>
+                                    <th>Proveedor</th>
+                                    <th>Marca</th>
+                                    <th>Eliminar</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  <tr v-for="(row, index) in productos" :key="index">
+                                    <td>
+                                      <input type="text" class="input-field" v-model="row.referencia" />
+                                    </td>
+                                    <td>
+                                      <input type="text" class="input-field" v-model="row.producto" />
+                                    </td>
+                                    <td>
+                                      <input type="number" class="input-field" v-model="row.cantidad" required />
+                                    </td>
+                                    <td>
+                                      <input type="text" class="input-field" v-model="row.proveedor" />
+                                    </td>
+                                    <td>
+                                      <input type="text" class="input-field" v-model="row.marca" />
+                                    </td>
+                                    <td>
+                                      <button type="button" class="delete-button" @click="eliminarRow(index)">❌</button>
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
                               <hr>
-                              <div class="row-group">
-                                  <div class="form-group small-width">
-                                      <label>Negociador:</label>
-                                      <select class="input-field" v-model="negociador" required>
-                                          <option :value="null">Seleccione...</option>
-                                          <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
-                                      </select>
-                                  </div>
-                                  <div class="form-group">
-                                      <label>Asunto:</label>
-                                      <input type="text" class="input-field" v-model="asunto">
-                                  </div>
+                              <div style="margin-top: 16px;">
+                                <button class="round-button" style="position:static; width:40px; height:40px; font-size:18px;" @click="agregarRow">
+                                  <i class="fa-solid fa-plus"></i>
+                                </button>
                               </div>
                               <div class="column-group">
-                                  <div class="form-group">
-                                      <label>Cuerpo del mensaje:</label>
-                                      <textarea 
-                                        class="input-field" 
-                                        v-model="cuerpo_texto" 
-                                        @input="autoExpand($event)"
-                                        ref="textarea"
-                                      ></textarea>
-                                  </div>
                                   <button 
                                     type="submit" 
                                     class="submit-button align-start" 
@@ -256,7 +324,7 @@
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="exitoModalLabel">Modal Formación</h5>
+                    <h5 class="modal-title" id="exitoModalLabel">Modal Registro</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
@@ -382,11 +450,79 @@
         </div>
     </div>
 
+    <!-- Modal para ver y editar productos cargados -->
+    <div class="modal fade" id="productosModal" tabindex="-1" aria-labelledby="productosModalLabel" aria-hidden="true" ref="productosModal">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="productosModalLabel">Productos cargados</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="productos-table-scroll">
+                <table class="table table-bordered">
+                  <thead>
+                    <tr>
+                      <th>Referencia</th>
+                      <th>Descripción</th>
+                      <th>Cantidad</th>
+                      <th>Proveedor</th>
+                      <th>Marca</th>
+                      <th>Eliminar</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr v-for="(row, idx) in productos" :key="idx">
+                      <td>
+                        <input type="text" class="input-field" v-model="row.referencia" />
+                      </td>
+                      <td>
+                        <input type="text" class="input-field" v-model="row.producto" />
+                      </td>
+                      <td>
+                        <input type="number" class="input-field" v-model="row.cantidad" />
+                      </td>
+                      <td>
+                        <input type="text" class="input-field" v-model="row.proveedor" />
+                      </td>
+                      <td>
+                        <input type="text" class="input-field" v-model="row.marca" />
+                      </td>
+                      <td>
+                        <button type="button" class="delete-button" @click="eliminarRow(idx)">❌</button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div style="margin-top: 16px;">
+                <button class="round-button" style="position:static; width:40px; height:40px; font-size:18px;" @click="agregarRow">
+                  <i class="fa-solid fa-plus"></i>
+                </button>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button 
+                type="submit" 
+                class="submit-button align-start" 
+                :disabled="isLoading"
+                style="height: 38px; margin-bottom: 10px;"
+                @click="validarFormulario"
+              >
+                <span v-if="isLoading" class="spinner"></span>
+                <span v-else>Registrar Solicitud</span>
+              </button>
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+          </div>
+        </div>
+    </div>
+
 </template>
 
 <script setup>
 import apiUrl from "../../config.js";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { Modal } from 'bootstrap';
@@ -407,12 +543,14 @@ const lista_estados_solicitud = ref([]);
 const fechaResuelto = ref(null);
 const mensajeResuelto = ref("");
 const estadoSolicitud = ref(null);
+const mostrarAcordeonProductos = ref(false);
 
 const modalInstance = ref(null);
 const modalErrorInstance = ref(null);
 const modalDetallesInstance = ref(null);
 const logoutModalInstance = ref(null);
 const historicoModalInstance = ref(null);
+const productosModalInstance = ref(null);
 
 const msg = ref("");
 const errorMsg = ref("");
@@ -431,11 +569,80 @@ const total_registros = ref(0);
 const limit = ref(15);
 const position = ref(1);
 
+const mostrarErrores = ref(false);
+
+const negociadorError = ref(false);
+const asuntoError = ref(false);
+const cuerpo_textoError = ref(false);
+
 const token_status = ref(0);
 
 const isLoading = ref(false);
 
+const fileInput = ref(null);
+const archivoSeleccionado = ref(null);
+
+// Maneja el cambio de archivo
+function onFileChange(event) {
+  archivoSeleccionado.value = event.target.files[0] || null;
+}
+
+// Procesa el archivo seleccionado
+function procesarArchivo() {
+  if (archivoSeleccionado.value) {
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+      const base64 = e.target.result.split(',')[1]; // Quita el prefijo data:...
+      try {
+        const response = await axios.post(
+          `${apiUrl}/cargar_archivo`, // Cambia el endpoint si es necesario
+          {
+            archivo: base64,
+            nombre: archivoSeleccionado.value.name
+          },
+          {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token.value}`
+            }
+          }
+        );
+        if (response.status === 200) {
+          console.log("Archivo enviado correctamente al backend:", response.data);
+          productos.value = response.data.data;
+        }
+      } catch (error) {
+        console.error('Error al cargar los datos:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+        if (error.response.status === 401) {
+          token_status.value = error.response.status;
+          errorMsg.value = error.response.data.detail;
+        } else if (error.response.status === 403) {
+            token_status.value = error.response.status;
+            errorMsg.value = error.response.data.detail;
+        }
+      }
+    };
+    reader.readAsDataURL(archivoSeleccionado.value);
+  } else {
+    console.log("No se ha seleccionado ningún archivo.");
+  }
+}
+
 const router = useRouter();
+
+const validarFormulario = () => {
+    mostrarErrores.value = true;
+
+    if (
+      !negociador.value || asunto.value || !cuerpo_texto.value
+    ) {
+        return; // Detener el envío si hay errores
+    }
+
+    guardar_solicitud(); // Llamar a la función original si todo está correcto
+};
 
 const guardar_solicitud = async () => {
     isLoading.value = true; // Activa el spinner y desactiva el botón
@@ -457,12 +664,20 @@ const guardar_solicitud = async () => {
             }
         );
         if (response.status === 200) {
+            // Cerrar la modal de productos si está activa antes de mostrar la de éxito
+            if (productosModalInstance.value && productosModalInstance.value._isShown) {
+                productosModalInstance.value.hide();
+            }
             msg.value = response.data.message;
             modalInstance.value.show();
             limpiarCampos();
             mostrarSolicitudes();
         }
     } catch (error) {
+        // Cerrar la modal de productos si está activa antes de mostrar la de error
+        if (productosModalInstance.value && productosModalInstance.value._isShown) {
+            productosModalInstance.value.hide();
+        }
         console.error('Error al cargar los datos:', error);
         modalErrorInstance.value.show();
         errorMsg.value = error.response.data.message;
@@ -664,6 +879,16 @@ const mostrarHistorico = (historico) => {
     historicoModalInstance.value.show();
 };
 
+// ✅ Función para descargar el archivo del template excel
+const descargarArchivo = () => {
+  const link = document.createElement('a');
+  link.href = '/template_solicitud.xlsx'; // Ruta relativa desde /public
+  link.download = 'template_solicitud.xlsx'; // Nombre sugerido al descargar
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 function logout() {
     try {
         localStorage.clear();
@@ -685,6 +910,27 @@ const confirmLogout = () => {
     logoutModalInstance.value.show();
 };
 
+function abrirModalProductos() {
+  if (!productosModalInstance.value) {
+    productosModalInstance.value = new Modal(productosModal.value);
+  }
+  productosModalInstance.value.show();
+}
+
+// ✅ Watcher para mostrarAcordeonProductos
+watch(mostrarAcordeonProductos, (nuevoValor) => {
+  if (nuevoValor) {
+    // Si se habilita el checkbox, reinicia productos a su estado inicial
+    productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }];
+  } else {
+    // Si se deshabilita el checkbox, limpia el input file
+    if (fileInput.value) {
+      fileInput.value.value = "";
+    }
+    archivoSeleccionado.value = null;
+  }
+});
+
 // ✅ Función mounted que carga información ANTES de que la página renderice
 onMounted(() => {
   token.value = localStorage.getItem("token");
@@ -693,6 +939,7 @@ onMounted(() => {
   modalInstance.value = new Modal(exitoModal);
   modalErrorInstance.value = new Modal(errorModal);
   modalDetallesInstance.value = new Modal(detallesModal);
+  productosModalInstance.value = new Modal(productosModal);
 
   if (!token.value) {
       router.push('/'); // Redirigir al login si no hay token
@@ -738,6 +985,13 @@ onMounted(() => {
 }
 .header-container h2{
   font-size: 1.3rem;
+}
+
+/* Nuevo: contenedor para los botones a la derecha */
+.header-buttons {
+  display: flex;
+  gap: 10px; /* Espacio entre los botones */
+  align-items: center;
 }
 
 .accordion {
@@ -1037,6 +1291,26 @@ textarea.input-field {
     background-color: #4385be; /* Azul más claro al pasar el cursor */
 }
 
+.logout-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+.template-button {
+    width: 200px;
+    background-color: #679b3a;
+}
+
+.template-button:hover {
+    background-color: #487223;
+}
+
+.error-text {
+    color: red;
+    font-size: 0.85em;
+    margin-top: 4px;
+}
+
 .spinner {
     border: 2px solid #f3f3f3; /* Color gris claro */
     border-top: 2px solid #2778bf; /* Azul */
@@ -1055,6 +1329,30 @@ textarea.input-field {
     100% {
         transform: rotate(360deg);
     }
+}
+
+/* Scroll para la tabla de productos en la modal */
+.productos-table-scroll {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+/* Ajuste para el botón agregar dentro de la modal */
+#productosModal .round-button {
+  margin-left: 0;
+  margin-top: 0;
+  background-color: #2778bf;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.3s;
+}
+
+#productosModal .round-button:hover {
+  background-color: #4385be;
 }
 
 @media (max-width: 768px) {
