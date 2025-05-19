@@ -85,6 +85,7 @@
                         <th>Estado de solicitud</th>
                         <th>Solicitante</th>
                         <th>Negociador</th>
+                        <th>Porcentaje Solicitud</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -98,6 +99,7 @@
                         <td>{{ sol.estado_solicitud_nombre }}</td>
                         <td>{{ sol.usuario_nombre }}</td>
                         <td>{{ sol.negociador_nombre }}</td>
+                        <td>{{ sol.porcentaje_solicitud }}%</td>
                         <td>
                             <i 
                                 class="fa-solid fa-eye" 
@@ -201,7 +203,7 @@
 
     <!-- Modal para mostrar detalles -->
     <div class="modal fade" id="detallesModal" tabindex="-1" aria-labelledby="detallesModalLabel" aria-hidden="true" ref="detallesModal">
-        <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="detallesModalLabel">{{asuntoTexto}}</h5>
@@ -219,6 +221,10 @@
                                 <th>Cantidad</th>
                                 <th>Proveedor</th>
                                 <th>Marca</th>
+                                <th>Despachado</th>
+                                <th>Faltante</th>
+                                <th>Cantidad Nueva</th>
+                                <th>Actualizar</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -228,6 +234,29 @@
                                 <td>{{ detalle.cantidad }}</td>
                                 <td>{{ detalle.proveedor }}</td>
                                 <td>{{ detalle.marca }}</td>
+                                <td>{{ detalle.producto_despachado }}</td>
+                                <td>{{ detalle.producto_faltante }}</td>
+                                <td>
+                                    <input 
+                                        type="number" 
+                                        class="input-field"
+                                        :min="0" 
+                                        :max="detalle.producto_faltante"
+                                        style="width: 60px; height: 30px;" 
+                                        v-model="detalle.cantidad_nueva"
+                                        :disabled="detalle.producto_faltante === 0"
+                                    />
+                                </td>
+                                <td>
+                                    <i 
+                                        class="fa-solid fa-arrows-rotate" 
+                                        style="cursor: pointer; color: #007bff;"
+                                        title="Actualizar"
+                                        @click="actualizarCantidadDetalle(detalle)" 
+                                        :class="{ 'disabled-icon': detalle.producto_faltante === 0 }"
+                                        :disabled="detalle.producto_faltante === 0"
+                                    ></i>
+                                </td>
                             </tr>
                         </tbody>
                     </table>
@@ -676,6 +705,100 @@ const actualizarEstado = async () => {
     }
 };
 
+// Nueva función para refrescar los detalles de la solicitud actual
+const refrescarDetallesSolicitud = async () => {
+    if (!solicitudId.value) return;
+    try {
+        const response = await axios.post(
+            `${apiUrl}/get_detalles_solicitud`,
+            { 
+                solicitud_id: solicitudId.value 
+            },
+            {
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`
+                }
+            }
+        );
+        if (response.status === 200 && response.data.data) {
+            // Actualiza los detalles en el modal
+            detallesSolicitud.value = response.data.data;
+        }
+    } catch (error) {
+        console.error('Error al cargar los datos:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+        if (error.response.status === 401) {
+          token_status.value = error.response.status;
+          errorMsg.value = error.response.data.detail;
+        } else if (error.response.status === 403) {
+            token_status.value = error.response.status;
+            errorMsg.value = error.response.data.detail;
+        }
+    }
+};
+
+// Nueva función para actualizar la cantidad de un detalle
+const actualizarCantidadDetalle = async (detalle) => {
+    // Validar cantidad_nueva
+    if (
+        detalle.cantidad_nueva === undefined ||
+        detalle.cantidad_nueva === null ||
+        detalle.cantidad_nueva === "" ||
+        isNaN(detalle.cantidad_nueva)
+    ) {
+        alert("Por favor ingrese una cantidad válida.");
+        return;
+    }
+    if (detalle.cantidad_nueva < 0) {
+        alert("La cantidad no puede ser negativa.");
+        return;
+    }
+    if (detalle.producto_faltante !== undefined && detalle.cantidad_nueva > detalle.producto_faltante) {
+        alert("La cantidad nueva no puede ser mayor al faltante.");
+        return;
+    }
+
+    try {
+        const response = await axios.post(
+            `${apiUrl}/actualizar_cantidad_detalle`,
+            {
+                detalle_id: detalle.id,
+                cantidad_nueva: detalle.cantidad_nueva,
+                solicitud_id: solicitudId.value,
+                usuario_creador: usuario_creador.value,
+                producto_despachado: detalle.producto_despachado,
+                producto_faltante: detalle.producto_faltante,
+                producto: detalle.producto,
+                referencia: detalle.referencia
+            },
+            {
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`
+                }
+            }
+        );
+        if (response.status === 200) {
+            await mostrarSolicitudes();
+            await refrescarDetallesSolicitud();
+            alert(response.data.message || "Cantidad actualizada correctamente.");
+        }
+    } catch (error) {
+        console.error('Error al cargar los datos:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+        if (error.response.status === 401) {
+          token_status.value = error.response.status;
+          errorMsg.value = error.response.data.detail;
+        } else if (error.response.status === 403) {
+            token_status.value = error.response.status;
+            errorMsg.value = error.response.data.detail;
+        }
+    }
+};
+
 // ✅ Función mounted que carga información ANTES de que la página renderice
 onMounted(() => {
 
@@ -1005,6 +1128,11 @@ textarea.input-field {
 .modal-body {
     max-height: 400px; /* Limita la altura máxima del contenido */
     overflow-y: auto; /* Activa el scroll vertical si el contenido excede la altura */
+}
+
+.disabled-icon {
+    pointer-events: none;
+    opacity: 0.5;
 }
 
 @media (max-width: 768px) {

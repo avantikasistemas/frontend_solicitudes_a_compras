@@ -247,6 +247,7 @@
                         <th>Estado de solicitud</th>
                         <th>Solicitante</th>
                         <th>Negociador</th>
+                        <th>Porcentaje Solicitud</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -260,6 +261,7 @@
                         <td>{{ sol.estado_solicitud_nombre }}</td>
                         <td>{{ sol.usuario_nombre }}</td>
                         <td>{{ sol.negociador_nombre }}</td>
+                        <td>{{ sol.porcentaje_solicitud }}%</td>
                         <td>
                             <i 
                                 class="fa-solid fa-eye" 
@@ -381,6 +383,8 @@
                                 <th>Cantidad</th>
                                 <th>Proveedor</th>
                                 <th>Marca</th>
+                                <th>Despachado</th>
+                                <th>Faltante</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -390,6 +394,8 @@
                                 <td>{{ detalle.cantidad }}</td>
                                 <td>{{ detalle.proveedor }}</td>
                                 <td>{{ detalle.marca }}</td>
+                                <td>{{ detalle.producto_despachado }}</td>
+                                <td>{{ detalle.producto_faltante }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -636,7 +642,7 @@ const validarFormulario = () => {
     mostrarErrores.value = true;
 
     if (
-      !negociador.value || asunto.value || !cuerpo_texto.value
+      !negociador.value || !asunto.value || !cuerpo_texto.value
     ) {
         return; // Detener el envío si hay errores
     }
@@ -1303,6 +1309,11 @@ textarea.input-field {
 
 .template-button:hover {
     background-color: #487223;
+}
+
+.error .input-field {
+    border-color: red;
+    background-color: #ffe6e6;
 }
 
 .error-text {
