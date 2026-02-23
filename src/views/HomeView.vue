@@ -352,14 +352,16 @@
                         <td>{{ sol.porcentaje_solicitud }}%</td>
                         <td>
                             <i 
-                                class="fa-solid fa-eye" 
-                                style="cursor: pointer; color: #2778bf;" 
+                                class="fa-solid fa-eye action-icon" 
+                                style="color: #2778bf;" 
                                 @click="mostrarDetalles(sol.detalles, sol.cuerpo_texto, sol.asunto, sol.estado_solicitud, sol.fecha_resuelto, sol.comentario_resuelto)"
+                                title="Ver detalles"
                             ></i>
                             <i 
-                                class="fa-solid fa-file-lines" 
-                                style="cursor: pointer; color: #2778bf; margin-left: 10px;" 
+                                class="fa-solid fa-file-lines action-icon" 
+                                style="color: #28a745;" 
                                 @click="mostrarHistorico(sol.historico)"
+                                title="Ver histórico"
                             ></i>
                         </td>
                     </tr>
@@ -1016,6 +1018,7 @@ const limpiarCampos = () => {
     limpiarTercero();
     asunto.value = "";
     cuerpo_texto.value = "";
+    mostrarErrores.value = false; // Resetear los errores de validación
 
     // Restablece el tamaño del textarea usando el ref
     if (textarea.value) {
@@ -1449,62 +1452,184 @@ select[multiple].input-field option:checked {
 }
 
 .container-n {
-    width: 80%; /* Igual que el contenedor superior */
-    margin: 0 auto; /* Centra horizontalmente el contenedor */
-    height: calc(100vh - 120px); /* Ajusta la altura para que la tabla ocupe el espacio restante */
-    padding: 16px;
-    background-color: #ffffff;
+    width: 80%;
+    margin: 0 auto;
+    height: calc(100vh - 120px);
+    padding: 20px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
     display: flex;
     flex-direction: column;
     align-self: center;
-    overflow: hidden; /* Evita el scroll en toda la página */
+    overflow: hidden;
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
 }
 
-.h3-title{
-  font-size: 1.3rem;
+.h3-title {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #2778bf;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 3px solid transparent;
+    border-image: linear-gradient(90deg, #2778bf, #4385be, transparent) 1;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    position: relative;
+}
+
+.h3-title::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    bottom: -3px;
+    width: 60px;
+    height: 3px;
+    background: linear-gradient(90deg, #2778bf, #4385be);
+    border-radius: 2px;
 }
 
 .table-container {
-    flex-grow: 1; /* Permite que la tabla ocupe todo el espacio restante */
-    overflow-y: auto; /* Activa el scroll interno en la tabla */
-    max-height: 100%; /* Se ajusta a la altura disponible */
+    flex-grow: 1;
+    overflow-y: auto;
+    max-height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 10px;
 }
 
 table {
     width: 100%;
-    border-collapse: collapse;
+    border-collapse: separate;
+    border-spacing: 0;
     position: relative;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
 }
+
 /* Dejar fija la cabecera */
 thead {
-    /* position: sticky; */
+    position: sticky;
     top: 0;
-    background-color: #e5e7eb; /* Fijar color de fondo para que no sea transparente */
-    z-index: 10; /* Asegurar que esté sobre el contenido */
+    z-index: 10;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
+
 th {
-    background-color: #2778bf; /* Nuevo color para el encabezado de la tabla */
-    color: white; /* Asegura que el texto sea legible */
+    background: linear-gradient(135deg, #2778bf 0%, #1e5a8f 100%);
+    color: white;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    font-size: 0.75rem;
+    padding: 14px 12px;
+    border: none;
+    position: relative;
+}
+
+th::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
 }
 
 .modal-body table th {
-    background-color: #2778bf; /* Nuevo color para el encabezado de la tabla dentro del modal */
-    color: white; /* Asegura que el texto sea legible */
+    background: linear-gradient(135deg, #2778bf 0%, #1e5a8f 100%);
+    color: white;
 }
 
-th, td {
-    border: 1px solid #e5e7eb;
-    padding: 8px;
-    text-align: center; /* Centra el texto en la cabecera y las filas */
-    font-size: 0.75rem;
+td {
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 0.8rem;
+    border-bottom: 1px solid #f0f0f0;
+    border-right: 1px solid #f8f8f8;
+    transition: all 0.3s ease;
+}
+
+td:last-child {
+    border-right: none;
+}
+
+tbody tr {
+    transition: all 0.3s ease;
+    background: white;
+}
+
+tbody tr:nth-child(even) {
+    background: #fafbfc;
+}
+
+tbody tr:hover {
+    background: linear-gradient(135deg, #e3f2fd 0%, #f0f7ff 100%);
+    transform: scale(1.01);
+    box-shadow: 0 4px 12px rgba(39, 120, 191, 0.15);
+    cursor: pointer;
+}
+
+tbody tr:hover td {
+    color: #1e5a8f;
+    font-weight: 500;
+}
+
+tbody tr td:first-child {
+    font-weight: 600;
+    color: #2778bf;
+}
+
+tbody tr td i {
+    transition: all 0.3s ease;
+    font-size: 1.1rem;
+}
+
+/* Asegurar que la celda de acciones muestre los iconos en línea */
+tbody tr td:last-child {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.action-icon {
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 50%;
+    background: rgba(39, 120, 191, 0.1);
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-icon:hover {
+    transform: scale(1.3) rotate(10deg);
+    background: rgba(39, 120, 191, 0.2);
+    filter: drop-shadow(0 2px 6px rgba(39, 120, 191, 0.4));
+}
+
+.action-icon:active {
+    transform: scale(1.1);
+}
+
+tbody tr td i:hover {
+    transform: scale(1.3);
+    filter: drop-shadow(0 2px 4px rgba(39, 120, 191, 0.4));
 }
 
 .no-registros {
     text-align: center;
-    font-weight: bold;
-    color: #888;
-    padding: 16px;
+    font-weight: 600;
+    color: #999;
+    padding: 32px;
     font-size: 1rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+    border-radius: 8px;
+    margin: 20px;
 }
 
 .row-group {
