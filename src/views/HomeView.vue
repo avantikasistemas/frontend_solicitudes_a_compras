@@ -14,13 +14,65 @@
       <!-- NUEVO: Campos de negociador, asunto y cuerpo del mensaje arriba del input file -->
       <div class="form-flex" style="margin: 20px 20px 0 20px;">
         <div class="row-group">
-          <div class="form-group small-width" :class="{ 'error': (!negociador && mostrarErrores)}">
-            <label>Negociador:</label>
-            <select class="input-field" v-model="negociador">
-              <option :value="null">Seleccione...</option>
-              <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
-            </select>
-            <p v-if="!negociador && mostrarErrores" class="error-text">Este campo es obligatorio.</p>
+          <div class="form-group small-width" style="position: relative;">
+            <label>Tercero:</label>
+            <input 
+              type="text" 
+              class="input-field" 
+              v-model="tercero_busqueda"
+              @input="buscarTerceros"
+              @focus="mostrar_dropdown_terceros = tercero_busqueda.length >= 3 && list_terceros.length > 0"
+              placeholder="Escribe para buscar..."
+            >
+            <!-- Dropdown de resultados -->
+            <div 
+              v-if="mostrar_dropdown_terceros" 
+              class="terceros-dropdown"
+            >
+              <div 
+                v-for="tercero in list_terceros" 
+                :key="tercero.nit"
+                class="tercero-item"
+                @click="seleccionarTercero(tercero)"
+              >
+                {{ tercero.nombres }} ({{ tercero.nit }})
+              </div>
+            </div>
+            <small v-if="tercero_busqueda.length > 0 && tercero_busqueda.length < 3" style="color: #888; font-size: 0.8em;">
+              Ingresa al menos 3 caracteres para buscar
+            </small>
+          </div>
+          <div class="form-group small-width" :class="{ 'error': (negociador.length === 0 && mostrarErrores)}" style="position: relative;">
+            <label>Negociador(es):</label>
+            <div 
+              class="custom-multiselect" 
+              @click="mostrar_dropdown_negociadores = !mostrar_dropdown_negociadores"
+            >
+              <div class="selected-items">
+                <span v-if="negociador.length === 0" class="placeholder">Seleccione negociadores...</span>
+                <span v-else class="selected-count">{{ negociador.length }} seleccionado(s)</span>
+              </div>
+              <i class="fa-solid fa-chevron-down" :class="{ 'rotated': mostrar_dropdown_negociadores }"></i>
+            </div>
+            
+            <!-- Dropdown de negociadores -->
+            <div v-if="mostrar_dropdown_negociadores" class="negociadores-dropdown" @click.stop>
+              <div 
+                v-for="neg in list_negociadores" 
+                :key="neg.usuario"
+                class="negociador-item"
+                @click="toggleNegociador(neg.usuario)"
+              >
+                <input 
+                  type="checkbox" 
+                  :checked="negociador.includes(neg.usuario)"
+                  @click.stop="toggleNegociador(neg.usuario)"
+                >
+                <label>{{ neg.nombre }}</label>
+              </div>
+            </div>
+            
+            <p v-if="negociador.length === 0 && mostrarErrores" class="error-text">Debe seleccionar al menos un negociador.</p>
           </div>
           <div class="form-group" :class="{ 'error': (!asunto && mostrarErrores)}" >
             <label>Asunto:</label>
@@ -214,12 +266,46 @@
                                           <option v-for="soli in list_solicitantes" :value="soli.usuario">{{ soli.nombre }}</option>
                                       </select>
                                   </div>
+                                  <div class="form-group" style="position: relative;">
+                                    <label>Negociador(es):</label>
+                                    <div 
+                                      class="custom-multiselect" 
+                                      @click="mostrar_dropdown_negociadores_filtro = !mostrar_dropdown_negociadores_filtro"
+                                      style="cursor: pointer;"
+                                    >
+                                      <div class="selected-items">
+                                        <span v-if="filtro_negociador.length === 0" class="placeholder">Seleccione negociadores...</span>
+                                        <span v-else class="selected-count">{{ filtro_negociador.length }} seleccionado(s)</span>
+                                      </div>
+                                      <i class="fa-solid fa-chevron-down" :class="{ 'rotated': mostrar_dropdown_negociadores_filtro }"></i>
+                                    </div>
+                                    
+                                    <!-- Dropdown de negociadores -->
+                                    <div v-if="mostrar_dropdown_negociadores_filtro" class="negociadores-dropdown" @click.stop>
+                                      <div 
+                                        v-for="neg in list_negociadores" 
+                                        :key="neg.usuario"
+                                        class="negociador-item"
+                                        @click="toggleNegociadorFiltro(neg.usuario)"
+                                      >
+                                        <input 
+                                          type="checkbox" 
+                                          :checked="filtro_negociador.includes(neg.usuario)"
+                                          @click.stop="toggleNegociadorFiltro(neg.usuario)"
+                                        >
+                                        <label>{{ neg.nombre }}</label>
+                                      </div>
+                                    </div>
+                                  </div>
+                              </div>
+                              <div class="row-group">
                                   <div class="form-group">
-                                    <label>Negociador:</label>
-                                    <select class="input-field" v-model="filtro_negociador">
-                                        <option :value="null">Seleccione...</option>
-                                        <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
-                                    </select>
+                                      <label>Fecha Desde:</label>
+                                      <input type="date" class="input-field" v-model="filtro_fecha_desde">
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Fecha Hasta:</label>
+                                      <input type="date" class="input-field" v-model="filtro_fecha_hasta">
                                   </div>
                               </div>
                               <div class="row-group">
@@ -246,6 +332,7 @@
                         <th>Fecha de solicitud</th>
                         <th>Estado de solicitud</th>
                         <th>Solicitante</th>
+                        <th>Tercero</th>
                         <th>Negociador</th>
                         <th>Porcentaje Solicitud</th>
                         <th>Acciones</th>
@@ -260,6 +347,7 @@
                         <td>{{ sol.created_at }}</td>
                         <td>{{ sol.estado_solicitud_nombre }}</td>
                         <td>{{ sol.usuario_nombre }}</td>
+                        <td>{{ sol.tercero_nombre || 'N/A' }}</td>
                         <td>{{ sol.negociador_nombre }}</td>
                         <td>{{ sol.porcentaje_solicitud }}%</td>
                         <td>
@@ -383,8 +471,8 @@
                                 <th>Cantidad</th>
                                 <th>Proveedor</th>
                                 <th>Marca</th>
-                                <th>Despachado</th>
-                                <th>Faltante</th>
+                                <th>Cotizado</th>
+                                <th>Negociador</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -394,8 +482,8 @@
                                 <td>{{ detalle.cantidad }}</td>
                                 <td>{{ detalle.proveedor }}</td>
                                 <td>{{ detalle.marca }}</td>
-                                <td>{{ detalle.producto_despachado }}</td>
-                                <td>{{ detalle.producto_faltante }}</td>
+                                <td>{{ detalle.cotizado === 1 ? 'Sí' : 'No' }}</td>
+                                <td>{{ detalle.negociador }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -474,6 +562,7 @@
                       <th>Cantidad</th>
                       <th>Proveedor</th>
                       <th>Marca</th>
+                      <th>Cotizado</th>
                       <th>Eliminar</th>
                     </tr>
                   </thead>
@@ -493,6 +582,16 @@
                       </td>
                       <td>
                         <input type="text" class="input-field" v-model="row.marca" />
+                      </td>
+                      <td>
+                        <select 
+                          class="form-select form-select-sm"
+                          style="width: 80px;"
+                          v-model.number="row.cotizado"
+                        >
+                          <option :value="0">No</option>
+                          <option :value="1">Sí</option>
+                        </select>
                       </td>
                       <td>
                         <button type="button" class="delete-button" @click="eliminarRow(idx)">❌</button>
@@ -528,7 +627,7 @@
 
 <script setup>
 import apiUrl from "../../config.js";
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { Modal } from 'bootstrap';
@@ -537,12 +636,17 @@ import logo from "@/assets/logo.png";
 const token = ref("");
 const usuario_creador = ref("");
 
-const productos = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }]);
-const negociador = ref(null);
+const productos = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "", cotizado: 0 }]);
+const negociador = ref([]);
 const asunto = ref("");
 const asuntoTexto = ref("");
 const cuerpo_texto = ref("");
+const tercero_seleccionado = ref(null);
+const tercero_busqueda = ref("");
+const mostrar_dropdown_terceros = ref(false);
+const mostrar_dropdown_negociadores = ref(false);
 const list_negociadores = ref([]);
+const list_terceros = ref([]);
 const list_solicitantes = ref([]);
 const lista_solicitudes = ref([]);
 const lista_estados_solicitud = ref([]);
@@ -568,7 +672,10 @@ const historicoSolicitud = ref([]);
 const filtro_id_solicitud = ref("");
 const filtro_estado_solicitud = ref(null);
 const filtro_solicitante = ref(null);
-const filtro_negociador = ref(null);
+const filtro_negociador = ref([]);
+const filtro_fecha_desde = ref("");
+const filtro_fecha_hasta = ref("");
+const mostrar_dropdown_negociadores_filtro = ref(false);
 
 const total_paginas = ref(0);
 const total_registros = ref(0);
@@ -642,7 +749,7 @@ const validarFormulario = () => {
     mostrarErrores.value = true;
 
     if (
-      !negociador.value || !asunto.value || !cuerpo_texto.value
+      negociador.value.length === 0 || !asunto.value || !cuerpo_texto.value
     ) {
         return; // Detener el envío si hay errores
     }
@@ -661,6 +768,7 @@ const guardar_solicitud = async () => {
                 negociador: negociador.value,
                 asunto: asunto.value,
                 cuerpo_texto: cuerpo_texto.value,
+                nit_tercero: tercero_seleccionado.value,
             },
             {
                 headers: {
@@ -757,6 +865,76 @@ const cargarSolicitantes = async () => {
     }
 };
 
+const cargarTerceros = async () => {
+    if (tercero_busqueda.value.length < 2) {
+        list_terceros.value = [];
+        mostrar_dropdown_terceros.value = false;
+        return;
+    }
+
+    try {
+        const response = await axios.post(
+            `${apiUrl}/get_terceros`, 
+            { busqueda: tercero_busqueda.value },
+            {
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`
+                }
+            }
+        );
+        if (response.status === 200) {
+            list_terceros.value = response.data.data;
+            mostrar_dropdown_terceros.value = list_terceros.value.length > 0;
+        }
+
+    } catch (error) {
+        console.error('Error al cargar los terceros:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response.data.message;
+        if (error.response.status === 401) {
+          token_status.value = error.response.status;
+          errorMsg.value = error.response.data.detail;
+        } else if (error.response.status === 403) {
+            token_status.value = error.response.status;
+            errorMsg.value = error.response.data.detail;
+        }
+    }
+};
+
+// Debounce para la búsqueda de terceros
+let timeoutTerceros = null;
+const buscarTerceros = () => {
+    clearTimeout(timeoutTerceros);
+    timeoutTerceros = setTimeout(() => {
+        cargarTerceros();
+    }, 500); // 500ms de delay
+};
+
+const seleccionarTercero = (tercero) => {
+    tercero_seleccionado.value = tercero.nit;
+    tercero_busqueda.value = tercero.nombres;
+    mostrar_dropdown_terceros.value = false;
+};
+
+const limpiarTercero = () => {
+    tercero_seleccionado.value = null;
+    tercero_busqueda.value = "";
+    list_terceros.value = [];
+    mostrar_dropdown_terceros.value = false;
+};
+
+const toggleNegociador = (usuario) => {
+    const index = negociador.value.indexOf(usuario);
+    if (index > -1) {
+        // Si ya está seleccionado, lo quitamos
+        negociador.value.splice(index, 1);
+    } else {
+        // Si no está seleccionado, lo agregamos
+        negociador.value.push(usuario);
+    }
+};
+
 const mostrarSolicitudes = async () => {
     try {
         const response = await axios.post(
@@ -766,6 +944,8 @@ const mostrarSolicitudes = async () => {
                 estado_solicitud: filtro_estado_solicitud.value,
                 solicitante: filtro_solicitante.value,
                 negociador: filtro_negociador.value,
+                fecha_desde: filtro_fecha_desde.value,
+                fecha_hasta: filtro_fecha_hasta.value,
                 limit: parseInt(limit.value),
                 position: parseInt(position.value),
             },
@@ -832,7 +1012,8 @@ const changePage = async (newPosition) => {
 
 const limpiarCampos = () => {
     productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }];
-    negociador.value = null;
+    negociador.value = [];
+    limpiarTercero();
     asunto.value = "";
     cuerpo_texto.value = "";
 
@@ -846,12 +1027,23 @@ const limpiarCamposFiltro = async () => {
   filtro_id_solicitud.value = "";
   filtro_estado_solicitud.value = null;
   filtro_solicitante.value = null;
-  filtro_negociador.value = null;
+  filtro_negociador.value = [];
+  filtro_fecha_desde.value = "";
+  filtro_fecha_hasta.value = "";
   await mostrarSolicitudes();
 };
 
+const toggleNegociadorFiltro = (negociador_param) => {
+    const index = filtro_negociador.value.indexOf(negociador_param);
+    if (index > -1) {
+        filtro_negociador.value.splice(index, 1);
+    } else {
+        filtro_negociador.value.push(negociador_param);
+    }
+};
+
 function agregarRow() {
-    productos.value.push({ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" });
+    productos.value.push({ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "", cotizado: 0 });
 };
 
 function eliminarRow(index) {
@@ -956,7 +1148,30 @@ onMounted(() => {
   mostrarEstadosSolicitud();
   mostrarSolicitudes();
 
+  // Listener para cerrar dropdown de terceros al hacer click fuera
+  document.addEventListener('click', cerrarDropdownTerceros);
 });
+
+// Limpiar listener al desmontar componente
+onUnmounted(() => {
+  document.removeEventListener('click', cerrarDropdownTerceros);
+});
+
+// Función para cerrar dropdown cuando se hace click fuera
+const cerrarDropdownTerceros = (event) => {
+  const terceroContainer = event.target.closest('.form-group');
+  if (!terceroContainer || !terceroContainer.querySelector('.terceros-dropdown')) {
+    mostrar_dropdown_terceros.value = false;
+  }
+  // Cerrar dropdown de negociadores si se hace click fuera
+  if (!terceroContainer || !terceroContainer.querySelector('.negociadores-dropdown')) {
+    const clickedMultiselect = event.target.closest('.custom-multiselect');
+    if (!clickedMultiselect) {
+      mostrar_dropdown_negociadores.value = false;
+      mostrar_dropdown_negociadores_filtro.value = false;
+    }
+  }
+};
 
 </script>
 
@@ -1082,6 +1297,122 @@ onMounted(() => {
   padding: 8px;
   border: 1px solid #d1d5db;
   border-radius: 4px;
+}
+
+/* Estilos para select múltiple */
+select[multiple].input-field {
+  min-height: 80px;
+  padding: 4px;
+}
+
+select[multiple].input-field option {
+  padding: 6px 8px;
+  margin: 2px 0;
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+select[multiple].input-field option:hover {
+  background-color: #e3f2fd;
+}
+
+select[multiple].input-field option:checked {
+  background: linear-gradient(0deg, #2778bf 0%, #4385be 100%);
+  color: white;
+  font-weight: 500;
+}
+
+/* Estilos para el custom multiselect de negociadores */
+.custom-multiselect {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 38px;
+  transition: border-color 0.2s;
+}
+
+.custom-multiselect:hover {
+  border-color: #2778bf;
+}
+
+.custom-multiselect .selected-items {
+  flex: 1;
+}
+
+.custom-multiselect .placeholder {
+  color: #9ca3af;
+  font-size: 0.9em;
+}
+
+.custom-multiselect .selected-count {
+  color: #2778bf;
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+.custom-multiselect i {
+  color: #6b7280;
+  font-size: 0.8em;
+  transition: transform 0.2s;
+}
+
+.custom-multiselect i.rotated {
+  transform: rotate(180deg);
+}
+
+/* Dropdown de negociadores */
+.negociadores-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+}
+
+.negociador-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.negociador-item:last-child {
+  border-bottom: none;
+}
+
+.negociador-item:hover {
+  background-color: #f3f4f6;
+}
+
+.negociador-item input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #2778bf;
+}
+
+.negociador-item label {
+  cursor: pointer;
+  flex: 1;
+  margin: 0;
+  font-size: 0.9em;
+  user-select: none;
 }
 
 .submit-button {
@@ -1376,6 +1707,39 @@ textarea.input-field {
   .form-group {
       flex: 1 1 100%; /* 1 columna en pantallas pequeñas */
   }
+}
+
+/* Estilos para el dropdown de terceros */
+.terceros-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 2px;
+}
+
+.tercero-item {
+  padding: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+  font-size: 0.9em;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.tercero-item:last-child {
+  border-bottom: none;
+}
+
+.tercero-item:hover {
+  background-color: #f3f4f6;
+  color: #2778bf;
 }
 
 </style>

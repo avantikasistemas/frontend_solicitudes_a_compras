@@ -42,22 +42,56 @@
                                     <label>Estado de Solicitud:</label>
                                     <select class="input-field" v-model="filtro_estado_solicitud">
                                         <option :value="null">Seleccione...</option>
-                                        <option v-for="est in lista_estados_solicitud" :value="est.id">{{ est.nombre }}</option>
+                                        <option v-for="est in lista_estados_solicitud" :key="est.id" :value="est.id">{{ est.nombre }}</option>
                                     </select>
                                   </div>
                                   <div class="form-group">
                                       <label>Solicitante:</label>
                                       <select class="input-field" v-model="filtro_solicitante">
                                           <option :value="null">Seleccione...</option>
-                                          <option v-for="soli in list_solicitantes" :value="soli.usuario">{{ soli.nombre }}</option>
+                                          <option v-for="soli in list_solicitantes" :key="soli.usuario" :value="soli.usuario">{{ soli.nombre }}</option>
                                       </select>
                                   </div>
+                                  <div class="form-group" style="position: relative;">
+                                    <label>Negociador(es):</label>
+                                    <div 
+                                      class="custom-multiselect" 
+                                      @click="mostrar_dropdown_negociadores_filtro = !mostrar_dropdown_negociadores_filtro"
+                                      style="cursor: pointer;"
+                                    >
+                                      <div class="selected-items">
+                                        <span v-if="filtro_negociador.length === 0" class="placeholder">Seleccione negociadores...</span>
+                                        <span v-else class="selected-count">{{ filtro_negociador.length }} seleccionado(s)</span>
+                                      </div>
+                                      <i class="fa-solid fa-chevron-down" :class="{ 'rotated': mostrar_dropdown_negociadores_filtro }"></i>
+                                    </div>
+                                    
+                                    <!-- Dropdown de negociadores -->
+                                    <div v-if="mostrar_dropdown_negociadores_filtro" class="negociadores-dropdown" @click.stop>
+                                      <div 
+                                        v-for="neg in list_negociadores" 
+                                        :key="neg.usuario"
+                                        class="negociador-item"
+                                        @click="toggleNegociadorFiltro(neg.usuario)"
+                                      >
+                                        <input 
+                                          type="checkbox" 
+                                          :checked="filtro_negociador.includes(neg.usuario)"
+                                          @click.stop="toggleNegociadorFiltro(neg.usuario)"
+                                        >
+                                        <label>{{ neg.nombre }}</label>
+                                      </div>
+                                    </div>
+                                  </div>
+                              </div>
+                              <div class="row-group">
                                   <div class="form-group">
-                                    <label>Negociador:</label>
-                                    <select class="input-field" v-model="filtro_negociador">
-                                        <option :value="null">Seleccione...</option>
-                                        <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
-                                    </select>
+                                      <label>Fecha Desde:</label>
+                                      <input type="date" class="input-field" v-model="filtro_fecha_desde">
+                                  </div>
+                                  <div class="form-group">
+                                      <label>Fecha Hasta:</label>
+                                      <input type="date" class="input-field" v-model="filtro_fecha_hasta">
                                   </div>
                               </div>
                               <div class="row-group">
@@ -84,6 +118,7 @@
                         <th>Fecha de solicitud</th>
                         <th>Estado de solicitud</th>
                         <th>Solicitante</th>
+                        <th>Tercero</th>
                         <th>Negociador</th>
                         <th>Porcentaje Solicitud</th>
                         <th>Acciones</th>
@@ -91,13 +126,14 @@
                 </thead>
                 <tbody>
                     <tr v-if="lista_solicitudes.length === 0">
-                        <td colspan="6" class="no-registros">No hay registros disponibles</td>
+                        <td colspan="8" class="no-registros">No hay registros disponibles</td>
                     </tr>
                     <tr v-else v-for="sol in lista_solicitudes" :key="sol.id">
                         <td>{{ sol.id }}</td>
                         <td>{{ sol.created_at }}</td>
                         <td>{{ sol.estado_solicitud_nombre }}</td>
                         <td>{{ sol.usuario_nombre }}</td>
+                        <td>{{ sol.tercero_nombre || 'N/A' }}</td>
                         <td>{{ sol.negociador_nombre }}</td>
                         <td>{{ sol.porcentaje_solicitud }}%</td>
                         <td>
@@ -221,9 +257,8 @@
                                 <th>Cantidad</th>
                                 <th>Proveedor</th>
                                 <th>Marca</th>
-                                <th>Despachado</th>
-                                <th>Faltante</th>
-                                <th>Cantidad Nueva</th>
+                                <th>Cotizado</th>
+                                <th>Negociador</th>
                                 <th>Actualizar</th>
                             </tr>
                         </thead>
@@ -234,28 +269,43 @@
                                 <td>{{ detalle.cantidad }}</td>
                                 <td>{{ detalle.proveedor }}</td>
                                 <td>{{ detalle.marca }}</td>
-                                <td>{{ detalle.producto_despachado }}</td>
-                                <td>{{ detalle.producto_faltante }}</td>
                                 <td>
-                                    <input 
-                                        type="number" 
-                                        class="input-field"
-                                        :min="0" 
-                                        :max="detalle.producto_faltante"
-                                        style="width: 60px; height: 30px;" 
-                                        v-model="detalle.cantidad_nueva"
-                                        :disabled="detalle.producto_faltante === 0"
-                                    />
+                                    <!-- Solo texto si está resuelto -->
+                                    <span v-if="estadoSolicitud === 4">{{ detalle.cotizado === 1 ? 'Sí' : 'No' }}</span>
+                                    <!-- Select editable si no está resuelto -->
+                                    <select 
+                                        v-else
+                                        class="form-select form-select-sm"
+                                        style="width: 80px;"
+                                        v-model.number="detalle.cotizado"
+                                    >
+                                        <option :value="0">No</option>
+                                        <option :value="1">Sí</option>
+                                    </select>
+                                </td>
+                                <td>
+                                    <!-- Solo texto si está resuelto -->
+                                    <span v-if="estadoSolicitud === 4">{{ obtenerNombreNegociador(detalle.negociador) }}</span>
+                                    <!-- Select editable si no está resuelto -->
+                                    <select 
+                                        v-else
+                                        class="form-select form-select-sm"
+                                        style="width: 150px;"
+                                        v-model="detalle.negociador"
+                                    >
+                                        <option :value="null">Seleccione...</option>
+                                        <option v-for="neg in list_negociadores" :key="neg.usuario" :value="neg.usuario">{{ neg.nombre }}</option>
+                                    </select>
                                 </td>
                                 <td>
                                     <i 
+                                        v-if="estadoSolicitud !== 4"
                                         class="fa-solid fa-arrows-rotate" 
                                         style="cursor: pointer; color: #007bff;"
                                         title="Actualizar"
-                                        @click="actualizarCantidadDetalle(detalle)" 
-                                        :class="{ 'disabled-icon': detalle.producto_faltante === 0 }"
-                                        :disabled="detalle.producto_faltante === 0"
+                                        @click="actualizarDetalleCompleto(detalle)" 
                                     ></i>
+                                    <span v-else style="color: #6c757d;">-</span>
                                 </td>
                             </tr>
                         </tbody>
@@ -270,12 +320,12 @@
                     <!-- Mostrar opciones de actualización si el estado no es 4 -->
                     <div v-else>
                         <!-- Nueva fila para seleccionar y actualizar negociador -->
-                        <div class="row-group">
+                        <!-- <div class="row-group">
                             <div class="form-group small-width">
                                 <label for="negociadorSelect">Negociador:</label>
                                 <select id="negociadorSelect" class="input-field" v-model="nuevoNegociador">
                                     <option :value="null">Seleccione...</option>
-                                    <option v-for="neg in list_negociadores" :value="neg.usuario">{{ neg.des_usuario }}</option>
+                                    <option v-for="neg in list_negociadores" :key="neg.usuario" :value="neg.usuario">{{ neg.nombre }}</option>
                                 </select>
                             </div>
                             <button 
@@ -285,14 +335,14 @@
                                 Actualizar Negociador
                             </button>
                         </div>
-                        <hr>
+                        <hr> -->
                         <!-- Nueva fila para seleccionar y actualizar estado -->
                         <div class="row-group">
                             <div class="form-group small-width">
                                 <label for="estadoSelect">Estado:</label>
                                 <select id="estadoSelect" class="input-field" v-model="nuevoEstado" @change="handleEstadoChange">
                                     <option :value="null">Seleccione...</option>
-                                    <option v-for="estado in lista_estados_solicitud" :value="estado.id">{{ estado.nombre }}</option>
+                                    <option v-for="estado in lista_estados_solicitud" :key="estado.id" :value="estado.id">{{ estado.nombre }}</option>
                                 </select>
                             </div>
                             <button 
@@ -368,7 +418,7 @@
 
 <script setup>
 import apiUrl from "../../config.js";
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { Modal } from 'bootstrap';
@@ -400,7 +450,10 @@ const historicoSolicitud = ref([]);
 const filtro_id_solicitud = ref("");
 const filtro_estado_solicitud = ref(null);
 const filtro_solicitante = ref(null);
-const filtro_negociador = ref(null);
+const filtro_negociador = ref([]);
+const filtro_fecha_desde = ref("");
+const filtro_fecha_hasta = ref("");
+const mostrar_dropdown_negociadores_filtro = ref(false);
 
 const total_paginas = ref(0);
 const total_registros = ref(0);
@@ -484,6 +537,8 @@ const mostrarSolicitudes = async () => {
                 estado_solicitud: filtro_estado_solicitud.value,
                 solicitante: filtro_solicitante.value,
                 negociador: filtro_negociador.value,
+                fecha_desde: filtro_fecha_desde.value,
+                fecha_hasta: filtro_fecha_hasta.value,
                 limit: parseInt(limit.value),
                 position: parseInt(position.value),
             },
@@ -552,14 +607,30 @@ const limpiarCamposFiltro = async () => {
     filtro_id_solicitud.value = "";
     filtro_estado_solicitud.value = null;
     filtro_solicitante.value = null;
-    filtro_negociador.value = null;
+    filtro_negociador.value = [];
+    filtro_fecha_desde.value = "";
+    filtro_fecha_hasta.value = "";
     await mostrarSolicitudes();
+};
+
+const toggleNegociadorFiltro = (negociador) => {
+    const index = filtro_negociador.value.indexOf(negociador);
+    if (index > -1) {
+        filtro_negociador.value.splice(index, 1);
+    } else {
+        filtro_negociador.value.push(negociador);
+    }
 };
 
 // ✅ Función para mostrar los detalles en el modal
 function mostrarDetalles(detalles, cuerpo_texto, asunto, solicitud_id, estado, fecha_resuelto, mensaje_resuelto) {
     solicitudId.value = solicitud_id;
-    detallesSolicitud.value = detalles;
+    // Convertir cotizado a número y asegurar que negociador esté disponible
+    detallesSolicitud.value = detalles.map(detalle => ({
+        ...detalle,
+        cotizado: Number(detalle.cotizado) || 0,
+        negociador: detalle.negociador || null
+    }));
     asuntoTexto.value = asunto;
     cuerpoTexto.value = cuerpo_texto;
     estadoSolicitud.value = estado;
@@ -646,6 +717,13 @@ const resetCamposModal = () => {
     mensajeResuelto.value = "";
 };
 
+// Función para obtener el nombre del negociador a partir del usuario
+const obtenerNombreNegociador = (usuario) => {
+    if (!usuario) return '-';
+    const negociador = list_negociadores.value.find(neg => neg.usuario === usuario);
+    return negociador ? negociador.nombre : usuario;
+};
+
 const handleEstadoChange = () => {
     if (nuevoEstado.value !== 4) {
         // Limpiar campos si no es "Resuelto"
@@ -722,8 +800,11 @@ const refrescarDetallesSolicitud = async () => {
             }
         );
         if (response.status === 200 && response.data.data) {
-            // Actualiza los detalles en el modal
-            detallesSolicitud.value = response.data.data;
+            // Actualiza los detalles en el modal y convierte cotizado a número
+            detallesSolicitud.value = response.data.data.map(detalle => ({
+                ...detalle,
+                cotizado: Number(detalle.cotizado) || 0
+            }));
         }
     } catch (error) {
         console.error('Error al cargar los datos:', error);
@@ -799,6 +880,82 @@ const actualizarCantidadDetalle = async (detalle) => {
     }
 };
 
+// Nueva función para actualizar cotizado y negociador del detalle
+const actualizarDetalleCompleto = async (detalle) => {
+    try {
+        const response = await axios.post(
+            `${apiUrl}/actualizar_cotizado`,
+            {
+                detalle_id: detalle.id,
+                solicitud_id: solicitudId.value,
+                cotizado: detalle.cotizado,
+                negociador: detalle.negociador,
+                referencia: detalle.referencia
+            },
+            {
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`
+                }
+            }
+        );
+        if (response.status === 200) {
+            // Refrescar la lista de solicitudes para mostrar el porcentaje actualizado
+            await mostrarSolicitudes();
+            console.log(response.data.message || "Detalle actualizado correctamente.");
+            alert("Detalle actualizado correctamente.");
+        }
+    } catch (error) {
+        console.error('Error al actualizar detalle:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response?.data?.message || "Error al actualizar detalle";
+        if (error.response?.status === 401) {
+          token_status.value = error.response.status;
+          errorMsg.value = error.response.data.detail;
+        } else if (error.response?.status === 403) {
+            token_status.value = error.response.status;
+            errorMsg.value = error.response.data.detail;
+        }
+    }
+};
+
+// Función anterior para actualizar el campo cotizado de un detalle (ya no se usa con @change)
+const actualizarCotizado = async (detalle) => {
+    try {
+        const response = await axios.post(
+            `${apiUrl}/actualizar_cotizado`,
+            {
+                detalle_id: detalle.id,
+                solicitud_id: solicitudId.value,
+                cotizado: detalle.cotizado,
+                referencia: detalle.referencia
+            },
+            {
+                headers: {
+                    Accept: "application/json",
+                    Authorization: `Bearer ${token.value}`
+                }
+            }
+        );
+        if (response.status === 200) {
+            // Refrescar la lista de solicitudes para mostrar el porcentaje actualizado
+            await mostrarSolicitudes();
+            console.log(response.data.message || "Cotizado actualizado correctamente.");
+        }
+    } catch (error) {
+        console.error('Error al actualizar cotizado:', error);
+        modalErrorInstance.value.show();
+        errorMsg.value = error.response?.data?.message || "Error al actualizar cotizado";
+        if (error.response?.status === 401) {
+          token_status.value = error.response.status;
+          errorMsg.value = error.response.data.detail;
+        } else if (error.response?.status === 403) {
+            token_status.value = error.response.status;
+            errorMsg.value = error.response.data.detail;
+        }
+    }
+};
+
 // ✅ Función mounted que carga información ANTES de que la página renderice
 onMounted(() => {
 
@@ -818,7 +975,25 @@ onMounted(() => {
   mostrarEstadosSolicitud();
   mostrarSolicitudes();
 
+  // Listener para cerrar dropdown de negociadores al hacer click fuera
+  document.addEventListener('click', cerrarDropdownNegociadores);
 });
+
+// Limpiar listener al desmontar componente
+onUnmounted(() => {
+  document.removeEventListener('click', cerrarDropdownNegociadores);
+});
+
+// Función para cerrar dropdown cuando se hace click fuera
+const cerrarDropdownNegociadores = (event) => {
+  const formGroup = event.target.closest('.form-group');
+  if (!formGroup || !formGroup.querySelector('.negociadores-dropdown')) {
+    const clickedMultiselect = event.target.closest('.custom-multiselect');
+    if (!clickedMultiselect) {
+      mostrar_dropdown_negociadores_filtro.value = false;
+    }
+  }
+};
 
 </script>
 
@@ -1133,6 +1308,99 @@ textarea.input-field {
 .disabled-icon {
     pointer-events: none;
     opacity: 0.5;
+}
+
+/* Estilos para el custom multiselect de negociadores */
+.custom-multiselect {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: 38px;
+  transition: border-color 0.2s;
+}
+
+.custom-multiselect:hover {
+  border-color: #2778bf;
+}
+
+.custom-multiselect .selected-items {
+  flex: 1;
+}
+
+.custom-multiselect .placeholder {
+  color: #9ca3af;
+  font-size: 0.9em;
+}
+
+.custom-multiselect .selected-count {
+  color: #2778bf;
+  font-weight: 500;
+  font-size: 0.9em;
+}
+
+.custom-multiselect i {
+  color: #6b7280;
+  font-size: 0.8em;
+  transition: transform 0.2s;
+}
+
+.custom-multiselect i.rotated {
+  transform: rotate(180deg);
+}
+
+/* Dropdown de negociadores */
+.negociadores-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  max-height: 250px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  margin-top: 4px;
+}
+
+.negociador-item {
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.negociador-item:last-child {
+  border-bottom: none;
+}
+
+.negociador-item:hover {
+  background-color: #f3f4f6;
+}
+
+.negociador-item input[type="checkbox"] {
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+  accent-color: #2778bf;
+}
+
+.negociador-item label {
+  cursor: pointer;
+  flex: 1;
+  margin: 0;
+  font-size: 0.9em;
+  user-select: none;
 }
 
 @media (max-width: 768px) {
