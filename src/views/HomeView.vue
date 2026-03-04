@@ -33,8 +33,10 @@
                 v-for="tercero in list_terceros" 
                 :key="tercero.nit"
                 class="tercero-item"
+                :class="{ 'tercero-fan': tercero.fan }"
                 @click="seleccionarTercero(tercero)"
               >
+                <i v-if="tercero.fan" class="fa-solid fa-star" style="color: #FFD700; margin-right: 6px;"></i>
                 {{ tercero.nombres }} ({{ tercero.nit }})
               </div>
             </div>
@@ -171,6 +173,7 @@
                                     <th>Cantidad</th>
                                     <th>Proveedor</th>
                                     <th>Marca</th>
+                                    <th>Negociador</th>
                                     <th>Eliminar</th>
                                   </tr>
                                 </thead>
@@ -190,6 +193,12 @@
                                     </td>
                                     <td>
                                       <input type="text" class="input-field" v-model="row.marca" />
+                                    </td>
+                                    <td>
+                                      <select class="input-field" v-model="row.negociador">
+                                        <option :value="null">Seleccione...</option>
+                                        <option v-for="neg in list_negociadores" :key="neg.usuario" :value="neg.usuario">{{ neg.nombre }}</option>
+                                      </select>
                                     </td>
                                     <td>
                                       <button type="button" class="delete-button" @click="eliminarRow(index)">❌</button>
@@ -311,6 +320,24 @@
                               <div class="row-group">
                                 <button type="submit" class="submit-button align-start" @click="mostrarSolicitudes">Consultar</button>
                                 <button type="submit" class="clean-button align-start" @click="limpiarCamposFiltro">Limpiar</button>
+                                <div style="margin-left: auto; display: flex; gap: 10px;">
+                                  <button 
+                                    type="button" 
+                                    class="fan-toggle-button"
+                                    :class="{ 'fan-toggle-active': filtro_fan === true }"
+                                    @click="toggleFiltroFan(true)"
+                                  >
+                                    <i class="fa-solid fa-star"></i> Cliente Fan
+                                  </button>
+                                  <button 
+                                    type="button" 
+                                    class="fan-toggle-button fan-toggle-nofan"
+                                    :class="{ 'fan-toggle-active-nofan': filtro_fan === false }"
+                                    @click="toggleFiltroFan(false)"
+                                  >
+                                    <i class="fa-regular fa-star"></i> Cliente no Fan
+                                  </button>
+                                </div>
                               </div>                      
                           </form>
                       </div>
@@ -342,12 +369,15 @@
                     <tr v-if="lista_solicitudes.length === 0">
                         <td colspan="6" class="no-registros">No hay registros disponibles</td>
                     </tr>
-                    <tr v-else v-for="sol in lista_solicitudes" :key="sol.id">
+                    <tr v-else v-for="sol in lista_solicitudes" :key="sol.id" :class="{ 'solicitud-fan': sol.fan }">
                         <td>{{ sol.id }}</td>
                         <td>{{ sol.created_at }}</td>
                         <td>{{ sol.estado_solicitud_nombre }}</td>
                         <td>{{ sol.usuario_nombre }}</td>
-                        <td>{{ sol.tercero_nombre || 'N/A' }}</td>
+                        <td>
+                            <i v-if="sol.fan" class="fa-solid fa-star" style="color: #FFD700; margin-right: 4px;" title="Cliente Fan"></i>
+                            {{ sol.tercero_nombre || 'N/A' }}
+                        </td>
                         <td>{{ sol.negociador_nombre }}</td>
                         <td>{{ sol.porcentaje_solicitud }}%</td>
                         <td>
@@ -468,6 +498,7 @@
                     <table class="table table-bordered">
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Referencia</th>
                                 <th>Descripción</th>
                                 <th>Cantidad</th>
@@ -478,7 +509,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="detalle in detallesSolicitud" :key="detalle.id">
+                            <tr v-for="(detalle, idx) in detallesSolicitud" :key="detalle.id">
+                                <td>{{ idx + 1 }}</td>
                                 <td>{{ detalle.referencia }}</td>
                                 <td>{{ detalle.producto }}</td>
                                 <td>{{ detalle.cantidad }}</td>
@@ -564,7 +596,8 @@
                       <th>Cantidad</th>
                       <th>Proveedor</th>
                       <th>Marca</th>
-                      <th>Cotizado</th>
+                      <!-- <th>Cotizado</th> -->
+                      <th>Negociador</th>
                       <th>Eliminar</th>
                     </tr>
                   </thead>
@@ -586,6 +619,12 @@
                         <input type="text" class="input-field" v-model="row.marca" />
                       </td>
                       <td>
+                        <select class="input-field" v-model="row.negociador">
+                          <option :value="null">Seleccione...</option>
+                          <option v-for="neg in list_negociadores" :key="neg.usuario" :value="neg.usuario">{{ neg.nombre }}</option>
+                        </select>
+                      </td>
+                      <!-- <td>
                         <select 
                           class="form-select form-select-sm"
                           style="width: 80px;"
@@ -594,7 +633,7 @@
                           <option :value="0">No</option>
                           <option :value="1">Sí</option>
                         </select>
-                      </td>
+                      </td> -->
                       <td>
                         <button type="button" class="delete-button" @click="eliminarRow(idx)">❌</button>
                       </td>
@@ -638,7 +677,7 @@ import logo from "@/assets/logo.png";
 const token = ref("");
 const usuario_creador = ref("");
 
-const productos = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "", cotizado: 0 }]);
+const productos = ref([{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "", cotizado: 0, negociador: null }]);
 const negociador = ref([]);
 const asunto = ref("");
 const asuntoTexto = ref("");
@@ -675,8 +714,10 @@ const filtro_id_solicitud = ref("");
 const filtro_estado_solicitud = ref(null);
 const filtro_solicitante = ref(null);
 const filtro_negociador = ref([]);
-const filtro_fecha_desde = ref("");
-const filtro_fecha_hasta = ref("");
+const anioActual = new Date().getFullYear();
+const filtro_fecha_desde = ref(`${anioActual}-01-01`);
+const filtro_fecha_hasta = ref(`${anioActual}-12-31`);
+const filtro_fan = ref(null);
 const mostrar_dropdown_negociadores_filtro = ref(false);
 
 const total_paginas = ref(0);
@@ -948,6 +989,7 @@ const mostrarSolicitudes = async () => {
                 negociador: filtro_negociador.value,
                 fecha_desde: filtro_fecha_desde.value,
                 fecha_hasta: filtro_fecha_hasta.value,
+                fan: filtro_fan.value,
                 limit: parseInt(limit.value),
                 position: parseInt(position.value),
             },
@@ -1013,7 +1055,7 @@ const changePage = async (newPosition) => {
 };
 
 const limpiarCampos = () => {
-    productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }];
+    productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "", cotizado: 0, negociador: null }];
     negociador.value = [];
     limpiarTercero();
     asunto.value = "";
@@ -1027,13 +1069,24 @@ const limpiarCampos = () => {
 };
 
 const limpiarCamposFiltro = async () => {
+  const anio = new Date().getFullYear();
   filtro_id_solicitud.value = "";
   filtro_estado_solicitud.value = null;
   filtro_solicitante.value = null;
   filtro_negociador.value = [];
-  filtro_fecha_desde.value = "";
-  filtro_fecha_hasta.value = "";
+  filtro_fecha_desde.value = `${anio}-01-01`;
+  filtro_fecha_hasta.value = `${anio}-12-31`;
+  filtro_fan.value = null;
   await mostrarSolicitudes();
+};
+
+const toggleFiltroFan = (valor) => {
+    if (filtro_fan.value === valor) {
+        filtro_fan.value = null;
+    } else {
+        filtro_fan.value = valor;
+    }
+    mostrarSolicitudes();
 };
 
 const toggleNegociadorFiltro = (negociador_param) => {
@@ -1046,7 +1099,7 @@ const toggleNegociadorFiltro = (negociador_param) => {
 };
 
 function agregarRow() {
-    productos.value.push({ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "", cotizado: 0 });
+    productos.value.push({ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "", cotizado: 0, negociador: null });
 };
 
 function eliminarRow(index) {
@@ -1122,7 +1175,7 @@ function abrirModalProductos() {
 watch(mostrarAcordeonProductos, (nuevoValor) => {
   if (nuevoValor) {
     // Si se habilita el checkbox, reinicia productos a su estado inicial
-    productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "" }];
+    productos.value = [{ referencia: "", producto: "", cantidad: "", proveedor: "", marca: "", cotizado: 0, negociador: null }];
   } else {
     // Si se deshabilita el checkbox, limpia el input file
     if (fileInput.value) {
@@ -1449,6 +1502,56 @@ select[multiple].input-field option:checked {
 
 .clean-button:hover {
   background: #f84f4f;
+}
+
+/* ── Botones toggle Fan / No Fan ── */
+.fan-toggle-button {
+    width: auto;
+    padding: 8px 14px;
+    background: #f5f5f5;
+    color: #555;
+    border: 1.5px solid #d1d5db;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 500;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-end;
+}
+
+.fan-toggle-button:hover {
+    border-color: #ffb300;
+    color: #7a5800;
+    background: #fffde7;
+}
+
+.fan-toggle-button.fan-toggle-active {
+    background: linear-gradient(135deg, #ffb300 0%, #ffd95e 100%);
+    color: #1a1a1a;
+    border-color: #ffb300;
+    box-shadow: 0 2px 8px rgba(255, 179, 0, 0.4);
+    font-weight: 700;
+}
+
+.fan-toggle-button.fan-toggle-active i {
+    color: #7a5800;
+}
+
+.fan-toggle-button.fan-toggle-nofan:hover {
+    border-color: #6c757d;
+    color: #333;
+    background: #f0f0f0;
+}
+
+.fan-toggle-button.fan-toggle-active-nofan {
+    background: #6c757d;
+    color: #fff;
+    border-color: #6c757d;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.35);
+    font-weight: 700;
 }
 
 .container-n {
@@ -1853,9 +1956,11 @@ textarea.input-field {
 .tercero-item {
   padding: 10px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: all 0.3s ease;
   font-size: 0.9em;
   border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
 }
 
 .tercero-item:last-child {
@@ -1865,6 +1970,78 @@ textarea.input-field {
 .tercero-item:hover {
   background-color: #f3f4f6;
   color: #2778bf;
+}
+
+/* Estilos para clientes fan */
+.tercero-item.tercero-fan {
+  background: linear-gradient(135deg, #fff9e6 0%, #fffbf0 100%);
+  border-left: 3px solid #FFD700;
+  font-weight: 500;
+  position: relative;
+}
+
+.tercero-item.tercero-fan:hover {
+  background: linear-gradient(135deg, #fff4d1 0%, #fff9e6 100%);
+  box-shadow: 0 2px 8px rgba(255, 215, 0, 0.2);
+  color: #2778bf;
+}
+
+.tercero-item.tercero-fan::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, #FFD700 0%, #FFA500 100%);
+  box-shadow: 0 0 8px rgba(255, 215, 0, 0.4);
+}
+
+/* =============================================
+   Filas de cliente fan en la tabla de solicitudes
+   ============================================= */
+@keyframes fan-pulse {
+  0%, 100% {
+    background: linear-gradient(135deg, #fffde7 0%, #fff9c4 50%, #fffde7 100%);
+    box-shadow: inset 3px 0 0 #FFD700, 0 0 6px rgba(255, 215, 0, 0.2);
+  }
+  50% {
+    background: linear-gradient(135deg, #fff3b0 0%, #ffe869 50%, #fff3b0 100%);
+    box-shadow: inset 3px 0 0 #FFA500, 0 0 14px rgba(255, 195, 0, 0.45);
+  }
+}
+
+@keyframes fan-shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.solicitud-fan {
+  animation: fan-pulse 4.5s ease-in-out infinite;
+  border-left: 3px solid #FFD700;
+  position: relative;
+}
+
+.solicitud-fan td {
+  color: #7a5800 !important;
+  font-weight: 500;
+}
+
+.solicitud-fan td:first-child {
+  color: #b8860b !important;
+  font-weight: 700;
+}
+
+.solicitud-fan:hover {
+  animation: none;
+  background: linear-gradient(135deg, #ffe066 0%, #fffde7 100%) !important;
+  box-shadow: 0 4px 18px rgba(255, 200, 0, 0.5) !important;
+  transform: scale(1.012);
+}
+
+.solicitud-fan:hover td {
+  color: #7a5800 !important;
+  font-weight: 600;
 }
 
 </style>

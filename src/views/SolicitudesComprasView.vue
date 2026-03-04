@@ -98,6 +98,24 @@
                               <div class="row-group">
                                 <button type="submit" class="submit-button align-start" @click="mostrarSolicitudes">Consultar</button>
                                 <button type="submit" class="clean-button align-start" @click="limpiarCamposFiltro">Limpiar</button>
+                                <div style="margin-left: auto; display: flex; gap: 10px;">
+                                  <button 
+                                    type="button" 
+                                    class="fan-toggle-button"
+                                    :class="{ 'fan-toggle-active': filtro_fan === true }"
+                                    @click="toggleFiltroFan(true)"
+                                  >
+                                    <i class="fa-solid fa-star"></i> Cliente Fan
+                                  </button>
+                                  <button 
+                                    type="button" 
+                                    class="fan-toggle-button fan-toggle-nofan"
+                                    :class="{ 'fan-toggle-active-nofan': filtro_fan === false }"
+                                    @click="toggleFiltroFan(false)"
+                                  >
+                                    <i class="fa-regular fa-star"></i> Cliente no Fan
+                                  </button>
+                                </div>
                               </div>                      
                           </form>
                       </div>
@@ -107,6 +125,61 @@
             </div>
           </div>
       </div>
+    </div>
+
+    <!-- Dashboard de KPIs -->
+    <div class="dashboard-kpis">
+        <div class="kpi-card kpi-total">
+            <div class="kpi-icon"><i class="fa-solid fa-inbox"></i></div>
+            <div class="kpi-info">
+                <span class="kpi-valor">{{ kpi_total }}</span>
+                <span class="kpi-label">Total Recibidas</span>
+            </div>
+        </div>
+        <div class="kpi-card kpi-nuevas">
+            <div class="kpi-icon"><i class="fa-solid fa-bell"></i></div>
+            <div class="kpi-info">
+                <span class="kpi-valor">{{ kpi_nuevas }}</span>
+                <span class="kpi-label">Nuevas</span>
+            </div>
+        </div>
+        <div class="kpi-card kpi-proceso">
+            <div class="kpi-icon"><i class="fa-solid fa-spinner"></i></div>
+            <div class="kpi-info">
+                <span class="kpi-valor">{{ kpi_en_proceso }}</span>
+                <span class="kpi-label">En Proceso</span>
+            </div>
+        </div>
+        <div class="kpi-card kpi-resueltas">
+            <div class="kpi-icon"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="kpi-info">
+                <span class="kpi-valor">{{ kpi_resueltas }}</span>
+                <span class="kpi-label">Resueltas</span>
+            </div>
+        </div>
+        <div class="kpi-card kpi-porcentaje">
+            <div class="kpi-gauge">
+                <svg viewBox="0 0 120 70" class="gauge-svg">
+                    <defs>
+                        <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                            <stop offset="0%" style="stop-color:#ffb300"/>
+                            <stop offset="100%" style="stop-color:#28a745"/>
+                        </linearGradient>
+                    </defs>
+                    <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="#e9ecef" stroke-width="12" stroke-linecap="round"/>
+                    <path
+                        d="M10 60 A50 50 0 0 1 110 60"
+                        fill="none"
+                        stroke="url(#gaugeGrad)"
+                        stroke-width="12"
+                        stroke-linecap="round"
+                        :stroke-dasharray="`${(parseFloat(kpi_pct_resueltas) / 100) * 157} 157`"
+                    />
+                </svg>
+                <span class="gauge-value">{{ kpi_pct_resueltas }}%</span>
+            </div>
+            <span class="kpi-label">% Resueltas</span>
+        </div>
     </div>
 
     <div class="container-n">
@@ -129,12 +202,15 @@
                     <tr v-if="lista_solicitudes.length === 0">
                         <td colspan="8" class="no-registros">No hay registros disponibles</td>
                     </tr>
-                    <tr v-else v-for="sol in lista_solicitudes" :key="sol.id">
+                    <tr v-else v-for="sol in lista_solicitudes" :key="sol.id" :class="{ 'solicitud-fan': sol.fan }">
                         <td>{{ sol.id }}</td>
                         <td>{{ sol.created_at }}</td>
                         <td>{{ sol.estado_solicitud_nombre }}</td>
                         <td>{{ sol.usuario_nombre }}</td>
-                        <td>{{ sol.tercero_nombre || 'N/A' }}</td>
+                        <td>
+                            <i v-if="sol.fan" class="fa-solid fa-star" style="color: #FFD700; margin-right: 4px;" title="Cliente Fan"></i>
+                            {{ sol.tercero_nombre || 'N/A' }}
+                        </td>
                         <td>{{ sol.negociador_nombre }}</td>
                         <td>{{ sol.porcentaje_solicitud }}%</td>
                         <td>
@@ -252,9 +328,27 @@
                     <p>No hay detalles.</p>
                 </div>
                 <div class="modal-body" v-else>
+                    <!-- Control masivo + guardado masivo -->
+                    <div v-if="estadoSolicitud !== 4" class="bulk-controls">
+                        <div class="bulk-radio-group">
+                            <span class="bulk-label">Marcar todos como cotizado:</span>
+                            <label class="radio-label-inline">
+                                <input type="radio" name="cotizado-bulk" :value="1" v-model="seleccionarTodoCotizado"> Sí
+                            </label>
+                            <label class="radio-label-inline">
+                                <input type="radio" name="cotizado-bulk" :value="0" v-model="seleccionarTodoCotizado"> No
+                            </label>
+                        </div>
+                        <button class="actualizar-masivo-button" @click="guardarMasivoDetalles" :disabled="isLoading">
+                            <span v-if="isLoading" class="spinner-sm"></span>
+                            <i v-else class="fa-solid fa-floppy-disk" style="margin-right: 5px;"></i>
+                            Guardar Todo
+                        </button>
+                    </div>
                     <table class="table table-bordered">
                         <thead>
                             <tr>
+                                <th>#</th>
                                 <th>Referencia</th>
                                 <th>Descripción</th>
                                 <th>Cantidad</th>
@@ -266,7 +360,8 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="detalle in detallesSolicitud" :key="detalle.id">
+                            <tr v-for="(detalle, idx) in detallesSolicitud" :key="detalle.id">
+                                <td>{{ idx + 1 }}</td>
                                 <td>{{ detalle.referencia }}</td>
                                 <td>{{ detalle.producto }}</td>
                                 <td>{{ detalle.cantidad }}</td>
@@ -275,16 +370,25 @@
                                 <td>
                                     <!-- Solo texto si está resuelto -->
                                     <span v-if="estadoSolicitud === 4">{{ detalle.cotizado === 1 ? 'Sí' : 'No' }}</span>
-                                    <!-- Select editable si no está resuelto -->
-                                    <select 
-                                        v-else
-                                        class="form-select form-select-sm"
-                                        style="width: 80px;"
-                                        v-model.number="detalle.cotizado"
-                                    >
-                                        <option :value="0">No</option>
-                                        <option :value="1">Sí</option>
-                                    </select>
+                                    <!-- Radio buttons editables si no está resuelto -->
+                                    <div v-else class="radio-cotizado">
+                                        <label class="radio-label">
+                                            <input 
+                                                type="radio" 
+                                                :name="'cotizado-' + detalle.id"
+                                                :value="1" 
+                                                v-model.number="detalle.cotizado"
+                                            > Sí
+                                        </label>
+                                        <label class="radio-label">
+                                            <input 
+                                                type="radio" 
+                                                :name="'cotizado-' + detalle.id"
+                                                :value="0" 
+                                                v-model.number="detalle.cotizado"
+                                            > No
+                                        </label>
+                                    </div>
                                 </td>
                                 <td>
                                     <!-- Solo texto si está resuelto -->
@@ -351,8 +455,11 @@
                             <button 
                                 class="actualizar-estado-button align-start" 
                                 @click="actualizarEstado()"
+                                :disabled="isLoadingEstado"
                             >
-                                Actualizar Estado
+                                <span v-if="isLoadingEstado" class="spinner-sm"></span>
+                                <i v-else class="fa-solid fa-rotate" style="margin-right: 5px;"></i>
+                                {{ isLoadingEstado ? 'Actualizando...' : 'Actualizar Estado' }}
                             </button>
                         </div>
                         <!-- Campos adicionales para estado "Resuelto" -->
@@ -421,7 +528,7 @@
 
 <script setup>
 import apiUrl from "../../config.js";
-import { ref, onMounted, onUnmounted } from "vue";
+import { ref, watch, onMounted, onUnmounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { Modal } from 'bootstrap';
@@ -455,8 +562,10 @@ const filtro_id_solicitud = ref("");
 const filtro_estado_solicitud = ref(null);
 const filtro_solicitante = ref(null);
 const filtro_negociador = ref([]);
-const filtro_fecha_desde = ref("");
-const filtro_fecha_hasta = ref("");
+const anioActual = new Date().getFullYear();
+const filtro_fecha_desde = ref(`${anioActual}-01-01`);
+const filtro_fecha_hasta = ref(`${anioActual}-12-31`);
+const filtro_fan = ref(null);
 const mostrar_dropdown_negociadores_filtro = ref(false);
 
 const total_paginas = ref(0);
@@ -465,12 +574,42 @@ const limit = ref(15);
 const position = ref(1);
 
 const isLoading = ref(false);
+const isLoadingEstado = ref(false);
+
+// ── Indicadores / Dashboard ──
+const indicadores = ref([]);
+
+const kpi_total = computed(() =>
+    indicadores.value.reduce((acc, i) => acc + i.total, 0)
+);
+const kpi_nuevas = computed(() =>
+    indicadores.value
+        .filter(i => i.estado_nombre.toLowerCase().includes('nueva') || i.estado_nombre.toLowerCase().includes('nuevo'))
+        .reduce((acc, i) => acc + i.total, 0)
+);
+const kpi_resueltas = computed(() =>
+    indicadores.value
+        .filter(i => i.estado_id === 4)
+        .reduce((acc, i) => acc + i.total, 0)
+);
+const kpi_en_proceso = computed(() => kpi_total.value - kpi_nuevas.value - kpi_resueltas.value);
+const kpi_pct_resueltas = computed(() =>
+    kpi_total.value > 0 ? ((kpi_resueltas.value / kpi_total.value) * 100).toFixed(1) : '0.0'
+);
 
 const nuevoNegociador = ref(null);
 const nuevoEstado = ref(null);
 const fechaResuelto = ref(null);
 const mensajeResuelto = ref("");
 const estadoSolicitud = ref(null);
+const seleccionarTodoCotizado = ref(null);
+
+// Watcher: cambia el cotizado de TODOS los detalles al seleccionar el radio masivo
+watch(seleccionarTodoCotizado, (valor) => {
+    if (valor !== null && detallesSolicitud.value && detallesSolicitud.value.length > 0) {
+        detallesSolicitud.value = detallesSolicitud.value.map(d => ({ ...d, cotizado: valor }));
+    }
+});
 
 const router = useRouter();
 
@@ -547,6 +686,7 @@ const mostrarSolicitudes = async () => {
                 negociador: negociador_filtro,
                 fecha_desde: filtro_fecha_desde.value,
                 fecha_hasta: filtro_fecha_hasta.value,
+                fan: filtro_fan.value,
                 limit: parseInt(limit.value),
                 position: parseInt(position.value),
             },
@@ -561,6 +701,7 @@ const mostrarSolicitudes = async () => {
             lista_solicitudes.value = response.data.data.registros;
             total_paginas.value = response.data.data.total_pag;
             total_registros.value = response.data.data.total_registros;
+            indicadores.value = response.data.data.indicadores || [];
         }
 
     } catch (error) {
@@ -612,13 +753,24 @@ const changePage = async (newPosition) => {
 };
 
 const limpiarCamposFiltro = async () => {
+    const anio = new Date().getFullYear();
     filtro_id_solicitud.value = "";
     filtro_estado_solicitud.value = null;
     filtro_solicitante.value = null;
     filtro_negociador.value = [];
-    filtro_fecha_desde.value = "";
-    filtro_fecha_hasta.value = "";
+    filtro_fecha_desde.value = `${anio}-01-01`;
+    filtro_fecha_hasta.value = `${anio}-12-31`;
+    filtro_fan.value = null;
     await mostrarSolicitudes();
+};
+
+const toggleFiltroFan = (valor) => {
+    if (filtro_fan.value === valor) {
+        filtro_fan.value = null; // desactivar si se vuelve a presionar el mismo
+    } else {
+        filtro_fan.value = valor;
+    }
+    mostrarSolicitudes();
 };
 
 const toggleNegociadorFiltro = (negociador) => {
@@ -632,6 +784,7 @@ const toggleNegociadorFiltro = (negociador) => {
 
 // ✅ Función para mostrar los detalles en el modal
 function mostrarDetalles(detalles, cuerpo_texto, asunto, solicitud_id, estado, fecha_resuelto, mensaje_resuelto) {
+    seleccionarTodoCotizado.value = null; // reset radio masivo al abrir
     solicitudId.value = solicitud_id;
     // Convertir cotizado a número y asegurar que negociador esté disponible
     detallesSolicitud.value = detalles.map(detalle => ({
@@ -642,6 +795,7 @@ function mostrarDetalles(detalles, cuerpo_texto, asunto, solicitud_id, estado, f
     asuntoTexto.value = asunto;
     cuerpoTexto.value = cuerpo_texto;
     estadoSolicitud.value = estado;
+    nuevoEstado.value = estado;
     fechaResuelto.value = fecha_resuelto || null; 
     mensajeResuelto.value = mensaje_resuelto || "";
     modalDetallesInstance.value.show();
@@ -723,6 +877,7 @@ const resetCamposModal = () => {
     nuevoEstado.value = null;
     fechaResuelto.value = null;
     mensajeResuelto.value = "";
+    seleccionarTodoCotizado.value = null;
 };
 
 // Función para obtener el nombre del negociador a partir del usuario
@@ -754,6 +909,7 @@ const actualizarEstado = async () => {
     // Obtener el texto del estado seleccionado
     const estadoSeleccionado = lista_estados_solicitud.value.find(estado => estado.id === nuevoEstado.value);
 
+    isLoadingEstado.value = true;
     try {
         const response = await axios.post(
             `${apiUrl}/actualizar_estado`, 
@@ -788,6 +944,8 @@ const actualizarEstado = async () => {
             token_status.value = error.response.status;
             errorMsg.value = error.response.data.detail;
         }
+    } finally {
+        isLoadingEstado.value = false;
     }
 };
 
@@ -888,9 +1046,50 @@ const actualizarCantidadDetalle = async (detalle) => {
     }
 };
 
+// Guardado masivo: actualiza todos los detalles de una sola vez
+const guardarMasivoDetalles = async () => {
+    isLoading.value = true;
+    let errores = 0;
+    try {
+        for (const detalle of detallesSolicitud.value) {
+            try {
+                console.log(detalle);
+                await axios.post(
+                    `${apiUrl}/actualizar_cotizado`,
+                    {
+                        detalle_id: detalle.id,
+                        solicitud_id: solicitudId.value,
+                        cotizado: detalle.cotizado,
+                        negociador: detalle.negociador,
+                        referencia: detalle.referencia,
+                        estado_solicitud: estadoSolicitud.value
+                    },
+                    {
+                        headers: {
+                            Accept: "application/json",
+                            Authorization: `Bearer ${token.value}`
+                        }
+                    }
+                );
+            } catch {
+                errores++;
+            }
+        }
+        await mostrarSolicitudes();
+        if (errores === 0) {
+            alert("Todos los detalles fueron actualizados correctamente.");
+        } else {
+            alert(`Actualización completada con ${errores} error(es). Revisa los detalles.`);
+        }
+    } finally {
+        isLoading.value = false;
+    }
+};
+
 // Nueva función para actualizar cotizado y negociador del detalle
 const actualizarDetalleCompleto = async (detalle) => {
     try {
+        console.log(detalle);
         const response = await axios.post(
             `${apiUrl}/actualizar_cotizado`,
             {
@@ -898,7 +1097,8 @@ const actualizarDetalleCompleto = async (detalle) => {
                 solicitud_id: solicitudId.value,
                 cotizado: detalle.cotizado,
                 negociador: detalle.negociador,
-                referencia: detalle.referencia
+                referencia: detalle.referencia,
+                estado_solicitud: estadoSolicitud.value
             },
             {
                 headers: {
@@ -930,13 +1130,15 @@ const actualizarDetalleCompleto = async (detalle) => {
 // Función anterior para actualizar el campo cotizado de un detalle (ya no se usa con @change)
 const actualizarCotizado = async (detalle) => {
     try {
+        console.log(detalle);
         const response = await axios.post(
             `${apiUrl}/actualizar_cotizado`,
             {
                 detalle_id: detalle.id,
                 solicitud_id: solicitudId.value,
                 cotizado: detalle.cotizado,
-                referencia: detalle.referencia
+                referencia: detalle.referencia,
+                estado_solicitud: estadoSolicitud.value
             },
             {
                 headers: {
@@ -1316,6 +1518,48 @@ tbody tr td i:hover {
     filter: drop-shadow(0 2px 4px rgba(255, 195, 0, 0.5));
 }
 
+/* =============================================
+   Filas de cliente fan en la tabla de solicitudes
+   ============================================= */
+@keyframes fan-pulse {
+  0%, 100% {
+    background: linear-gradient(135deg, #fffde7 0%, #fff9c4 50%, #fffde7 100%);
+    box-shadow: inset 3px 0 0 #FFD700, 0 0 6px rgba(255, 215, 0, 0.2);
+  }
+  50% {
+    background: linear-gradient(135deg, #fff3b0 0%, #ffe869 50%, #fff3b0 100%);
+    box-shadow: inset 3px 0 0 #FFA500, 0 0 14px rgba(255, 195, 0, 0.45);
+  }
+}
+
+.solicitud-fan {
+  animation: fan-pulse 4.5s ease-in-out infinite;
+  border-left: 3px solid #FFD700;
+  position: relative;
+}
+
+.solicitud-fan td {
+  color: #7a5800 !important;
+  font-weight: 500;
+}
+
+.solicitud-fan td:first-child {
+  color: #b8860b !important;
+  font-weight: 700;
+}
+
+.solicitud-fan:hover {
+  animation: none;
+  background: linear-gradient(135deg, #ffe066 0%, #fffde7 100%) !important;
+  box-shadow: 0 4px 18px rgba(255, 200, 0, 0.5) !important;
+  transform: scale(1.012);
+}
+
+.solicitud-fan:hover td {
+  color: #7a5800 !important;
+  font-weight: 600;
+}
+
 .no-registros {
     text-align: center;
     font-weight: 600;
@@ -1369,10 +1613,72 @@ textarea.input-field {
     cursor: pointer;
     transition: background 0.3s;
     font-size: 0.9em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .actualizar-estado-button:hover {
     background: #ffd858;
+}
+
+.actualizar-estado-button:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    color: #666;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* ── Botones toggle Fan / No Fan ── */
+.fan-toggle-button {
+    width: auto;
+    padding: 8px 14px;
+    background: #f5f5f5;
+    color: #555;
+    border: 1.5px solid #d1d5db;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.85em;
+    font-weight: 500;
+    transition: all 0.25s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    align-self: flex-end;
+}
+
+.fan-toggle-button:hover {
+    border-color: #ffb300;
+    color: #7a5800;
+    background: #fffde7;
+}
+
+.fan-toggle-button.fan-toggle-active {
+    background: linear-gradient(135deg, #ffb300 0%, #ffd95e 100%);
+    color: #1a1a1a;
+    border-color: #ffb300;
+    box-shadow: 0 2px 8px rgba(255, 179, 0, 0.4);
+    font-weight: 700;
+}
+
+.fan-toggle-button.fan-toggle-active i {
+    color: #7a5800;
+}
+
+.fan-toggle-button.fan-toggle-nofan:hover {
+    border-color: #6c757d;
+    color: #333;
+    background: #f0f0f0;
+}
+
+.fan-toggle-button.fan-toggle-active-nofan {
+    background: #6c757d;
+    color: #fff;
+    border-color: #6c757d;
+    box-shadow: 0 2px 8px rgba(108, 117, 125, 0.35);
+    font-weight: 700;
 }
 
 .pagination {
@@ -1439,6 +1745,121 @@ textarea.input-field {
 .disabled-icon {
     pointer-events: none;
     opacity: 0.5;
+}
+
+/* ── Controles masivos en la modal ── */
+.bulk-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(135deg, #fffde7 0%, #fff9c4 100%);
+  border: 1px solid #ffe082;
+  border-radius: 6px;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bulk-radio-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.bulk-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #7a5800;
+  white-space: nowrap;
+}
+
+.radio-label-inline {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  margin: 0;
+  color: #5a4000;
+}
+
+.radio-label-inline input[type="radio"] {
+  accent-color: #ffb300;
+  cursor: pointer;
+  width: 15px;
+  height: 15px;
+}
+
+.actualizar-masivo-button {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 16px;
+  background: linear-gradient(135deg, #ffb300 0%, #ffd95e 100%);
+  color: #1a1a1a;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 6px rgba(255, 179, 0, 0.3);
+  white-space: nowrap;
+}
+
+.actualizar-masivo-button:hover {
+  background: linear-gradient(135deg, #ffa000 0%, #ffca28 100%);
+  box-shadow: 0 4px 10px rgba(255, 179, 0, 0.45);
+  transform: translateY(-1px);
+}
+
+.actualizar-masivo-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.spinner-sm {
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #7a5800;
+  border-radius: 50%;
+  width: 13px;
+  height: 13px;
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  0%   { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Radio buttons de cotizado */
+.radio-cotizado {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+.radio-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.82rem;
+  cursor: pointer;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.radio-label input[type="radio"] {
+  accent-color: #ffb300;
+  cursor: pointer;
+  width: 14px;
+  height: 14px;
 }
 
 /* Estilos para el custom multiselect de negociadores */
@@ -1544,6 +1965,134 @@ textarea.input-field {
   .form-group {
       flex: 1 1 100%; /* 1 columna en pantallas pequeñas */
   }
+}
+
+/* =============================================
+   Dashboard de KPIs
+   ============================================= */
+.dashboard-kpis {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    width: 80%;
+    margin: 16px auto;
+    padding: 0 4px;
+}
+
+.kpi-card {
+    flex: 1 1 160px;
+    min-width: 140px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-left: 5px solid #e9ecef;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-card::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    opacity: 0.06;
+    background: currentColor;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+.kpi-total  { border-left-color: #2778bf; }
+.kpi-nuevas { border-left-color: #17a2b8; }
+.kpi-proceso { border-left-color: #ffb300; }
+.kpi-resueltas { border-left-color: #28a745; }
+.kpi-porcentaje { border-left-color: #6f42c1; flex-direction: column; align-items: center; gap: 0; }
+
+.kpi-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.kpi-total  .kpi-icon { background: #e8f0fb; color: #2778bf; }
+.kpi-nuevas .kpi-icon { background: #e0f7fa; color: #17a2b8; }
+.kpi-proceso .kpi-icon { background: #fff8e1; color: #ffb300; }
+.kpi-resueltas .kpi-icon { background: #e8f5e9; color: #28a745; }
+
+.kpi-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.kpi-valor {
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #1a1a1a;
+}
+
+.kpi-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+/* T\00e1cometro / gauge */
+.kpi-gauge {
+    position: relative;
+    width: 100px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.gauge-svg {
+    width: 100px;
+    height: 60px;
+    overflow: visible;
+}
+
+.gauge-value {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #6f42c1;
+    line-height: 1;
+}
+
+.kpi-porcentaje .kpi-label {
+    margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+    .dashboard-kpis {
+        width: 95%;
+    }
+    .kpi-card {
+        flex: 1 1 130px;
+    }
 }
 
 </style>
