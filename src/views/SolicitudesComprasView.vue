@@ -84,6 +84,14 @@
                                       </div>
                                     </div>
                                   </div>
+                                  <div class="form-group">
+                                    <label>Cotizado:</label>
+                                    <select class="input-field" v-model="filtro_cotizado">
+                                      <option :value="null">Todos</option>
+                                      <option :value="1">Sí</option>
+                                      <option :value="0">No</option>
+                                    </select>
+                                  </div>
                               </div>
                               <div class="row-group">
                                   <div class="form-group">
@@ -134,6 +142,7 @@
             <div class="kpi-info">
                 <span class="kpi-valor">{{ kpi_total }}</span>
                 <span class="kpi-label">Total Recibidas</span>
+                <span class="kpi-items"><i class="fa-solid fa-list" style="margin-right:4px;"></i>{{ kpi_total_items }} ítems</span>
             </div>
         </div>
         <div class="kpi-card kpi-nuevas">
@@ -141,6 +150,7 @@
             <div class="kpi-info">
                 <span class="kpi-valor">{{ kpi_nuevas }}</span>
                 <span class="kpi-label">Nuevas</span>
+                <span class="kpi-items"><i class="fa-solid fa-list" style="margin-right:4px;"></i>{{ kpi_nuevas_items }} ítems</span>
             </div>
         </div>
         <div class="kpi-card kpi-proceso">
@@ -148,6 +158,7 @@
             <div class="kpi-info">
                 <span class="kpi-valor">{{ kpi_en_proceso }}</span>
                 <span class="kpi-label">En Proceso</span>
+                <span class="kpi-items"><i class="fa-solid fa-list" style="margin-right:4px;"></i>{{ kpi_proceso_items }} ítems</span>
             </div>
         </div>
         <div class="kpi-card kpi-resueltas">
@@ -155,6 +166,7 @@
             <div class="kpi-info">
                 <span class="kpi-valor">{{ kpi_resueltas }}</span>
                 <span class="kpi-label">Resueltas</span>
+                <span class="kpi-items"><i class="fa-solid fa-list" style="margin-right:4px;"></i>{{ kpi_resueltas_items }} ítems</span>
             </div>
         </div>
         <div class="kpi-card kpi-porcentaje">
@@ -562,6 +574,7 @@ const filtro_id_solicitud = ref("");
 const filtro_estado_solicitud = ref(null);
 const filtro_solicitante = ref(null);
 const filtro_negociador = ref([]);
+const filtro_cotizado = ref(null);
 const anioActual = new Date().getFullYear();
 const filtro_fecha_desde = ref(`${anioActual}-01-01`);
 const filtro_fecha_hasta = ref(`${anioActual}-12-31`);
@@ -596,6 +609,22 @@ const kpi_en_proceso = computed(() => kpi_total.value - kpi_nuevas.value - kpi_r
 const kpi_pct_resueltas = computed(() =>
     kpi_total.value > 0 ? ((kpi_resueltas.value / kpi_total.value) * 100).toFixed(1) : '0.0'
 );
+
+// Items (detalles) por grupo
+const kpi_total_items = computed(() =>
+    indicadores.value.reduce((acc, i) => acc + (i.total_items || 0), 0)
+);
+const kpi_nuevas_items = computed(() =>
+    indicadores.value
+        .filter(i => i.estado_nombre.toLowerCase().includes('nueva') || i.estado_nombre.toLowerCase().includes('nuevo'))
+        .reduce((acc, i) => acc + (i.total_items || 0), 0)
+);
+const kpi_resueltas_items = computed(() =>
+    indicadores.value
+        .filter(i => i.estado_id === 4)
+        .reduce((acc, i) => acc + (i.total_items || 0), 0)
+);
+const kpi_proceso_items = computed(() => kpi_total_items.value - kpi_nuevas_items.value - kpi_resueltas_items.value);
 
 const nuevoNegociador = ref(null);
 const nuevoEstado = ref(null);
@@ -684,6 +713,7 @@ const mostrarSolicitudes = async () => {
                 estado_solicitud: filtro_estado_solicitud.value,
                 solicitante: filtro_solicitante.value,
                 negociador: negociador_filtro,
+                cotizado: filtro_cotizado.value,
                 fecha_desde: filtro_fecha_desde.value,
                 fecha_hasta: filtro_fecha_hasta.value,
                 fan: filtro_fan.value,
@@ -758,6 +788,7 @@ const limpiarCamposFiltro = async () => {
     filtro_estado_solicitud.value = null;
     filtro_solicitante.value = null;
     filtro_negociador.value = [];
+    filtro_cotizado.value = null;
     filtro_fecha_desde.value = `${anio}-01-01`;
     filtro_fecha_hasta.value = `${anio}-12-31`;
     filtro_fan.value = null;
@@ -2054,6 +2085,15 @@ textarea.input-field {
     letter-spacing: 0.5px;
     color: #6c757d;
     margin-top: 2px;
+}
+
+.kpi-items {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    font-weight: 500;
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
 }
 
 /* T\00e1cometro / gauge */

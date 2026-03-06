@@ -70,6 +70,7 @@ const login = async () => {
     if (response.status === 200) {
         localStorage.setItem("token", response.data.data.token);
         localStorage.setItem("usuario_creador", response.data.data.usuario);
+        localStorage.setItem("es_solicitante_normal", response.data.data.es_solicitante_normal);
         router.push("/solicitudes");
     }
   } catch (err) {

@@ -14,8 +14,8 @@
       <!-- NUEVO: Campos de negociador, asunto y cuerpo del mensaje arriba del input file -->
       <div class="form-flex" style="margin: 20px 20px 0 20px;">
         <div class="row-group">
-          <div class="form-group small-width" style="position: relative;">
-            <label>Tercero:</label>
+          <div class="form-group small-width" style="position: relative;" :class="{ 'error': (!tercero_seleccionado && mostrarErrores) }">
+            <label>Tercero *:</label>
             <input 
               type="text" 
               class="input-field" 
@@ -43,48 +43,37 @@
             <small v-if="tercero_busqueda.length > 0 && tercero_busqueda.length < 3" style="color: #888; font-size: 0.8em;">
               Ingresa al menos 3 caracteres para buscar
             </small>
+            <p v-if="!tercero_seleccionado && mostrarErrores" class="error-text">Este campo es obligatorio.</p>
           </div>
           <div class="form-group small-width" :class="{ 'error': (negociador.length === 0 && mostrarErrores)}" style="position: relative;">
-            <label>Negociador(es):</label>
-            <div 
-              class="custom-multiselect" 
-              @click="mostrar_dropdown_negociadores = !mostrar_dropdown_negociadores"
-            >
-              <div class="selected-items">
-                <span v-if="negociador.length === 0" class="placeholder">Seleccione negociadores...</span>
-                <span v-else class="selected-count">{{ negociador.length }} seleccionado(s)</span>
-              </div>
-              <i class="fa-solid fa-chevron-down" :class="{ 'rotated': mostrar_dropdown_negociadores }"></i>
-            </div>
-            
-            <!-- Dropdown de negociadores -->
-            <div v-if="mostrar_dropdown_negociadores" class="negociadores-dropdown" @click.stop>
-              <div 
-                v-for="neg in list_negociadores" 
-                :key="neg.usuario"
-                class="negociador-item"
-                @click="toggleNegociador(neg.usuario)"
-              >
-                <input 
-                  type="checkbox" 
-                  :checked="negociador.includes(neg.usuario)"
-                  @click.stop="toggleNegociador(neg.usuario)"
+            <label>Negociador(es) *:</label>
+            <div class="negociadores-readonly" :class="{ 'negociadores-readonly--error': negociador.length === 0 && mostrarErrores }">
+              <span v-if="negociador.length === 0" class="negociadores-readonly__placeholder">
+                <i class="fa-solid fa-circle-info" style="margin-right:5px; color:#aaa;"></i>
+                Se detectará automáticamente de los productos...
+              </span>
+              <template v-else>
+                <span 
+                  v-for="id in negociador" 
+                  :key="id" 
+                  class="negociador-chip"
                 >
-                <label>{{ neg.nombre }}</label>
-              </div>
+                  <i class="fa-solid fa-user" style="margin-right:4px; font-size:0.75em;"></i>
+                  {{ list_negociadores.find(n => n.usuario === id)?.nombre || id }}
+                </span>
+              </template>
             </div>
-            
-            <p v-if="negociador.length === 0 && mostrarErrores" class="error-text">Debe seleccionar al menos un negociador.</p>
+            <p v-if="negociador.length === 0 && mostrarErrores" class="error-text">Debe agregar al menos un producto con negociador asignado.</p>
           </div>
           <div class="form-group" :class="{ 'error': (!asunto && mostrarErrores)}" >
-            <label>Asunto:</label>
+            <label>Asunto *:</label>
             <input type="text" class="input-field" v-model="asunto">
             <p v-if="!asunto && mostrarErrores" class="error-text">Este campo es obligatorio.</p>
           </div>
         </div>
         <div class="column-group">
           <div class="form-group" :class="{ 'error': (!cuerpo_texto && mostrarErrores)}">
-            <label>Cuerpo del mensaje:</label>
+            <label>Cuerpo del mensaje *:</label>
             <textarea 
               class="input-field" 
               v-model="cuerpo_texto" 
@@ -165,15 +154,16 @@
                     <div class="filter-container">
                       <div class="form-container">
                           <form @submit.prevent="validarFormulario" class="form-flex">
+                              <p class="required-fields-note">Los campos señalados con <strong>*</strong> son obligatorios.</p>
                               <table class="table table-bordered">
                                 <thead>
                                   <tr>
                                     <th>Referencia</th>
-                                    <th>Descripción</th>
-                                    <th>Cantidad</th>
+                                    <th>Descripción *</th>
+                                    <th>Cantidad *</th>
                                     <th>Proveedor</th>
-                                    <th>Marca</th>
-                                    <th>Negociador</th>
+                                    <th>Marca *</th>
+                                    <th>Negociador *</th>
                                     <th>Eliminar</th>
                                   </tr>
                                 </thead>
@@ -183,19 +173,19 @@
                                       <input type="text" class="input-field" v-model="row.referencia" />
                                     </td>
                                     <td>
-                                      <input type="text" class="input-field" v-model="row.producto" />
+                                      <input type="text" class="input-field" :class="{ 'input-field--error': mostrarErrores && !row.producto }" v-model="row.producto" />
                                     </td>
                                     <td>
-                                      <input type="number" class="input-field" v-model="row.cantidad" required />
+                                      <input type="number" class="input-field" :class="{ 'input-field--error': mostrarErrores && (row.cantidad === '' || row.cantidad === null || row.cantidad === undefined) }" v-model="row.cantidad" />
                                     </td>
                                     <td>
                                       <input type="text" class="input-field" v-model="row.proveedor" />
                                     </td>
                                     <td>
-                                      <input type="text" class="input-field" v-model="row.marca" />
+                                      <input type="text" class="input-field" :class="{ 'input-field--error': mostrarErrores && !row.marca }" v-model="row.marca" />
                                     </td>
                                     <td>
-                                      <select class="input-field" v-model="row.negociador">
+                                      <select class="input-field" :class="{ 'input-field--error': mostrarErrores && !row.negociador }" v-model="row.negociador">
                                         <option :value="null">Seleccione...</option>
                                         <option v-for="neg in list_negociadores" :key="neg.usuario" :value="neg.usuario">{{ neg.nombre }}</option>
                                       </select>
@@ -208,7 +198,7 @@
                               </table>
                               <hr>
                               <div style="margin-top: 16px;">
-                                <button class="round-button" style="position:static; width:40px; height:40px; font-size:18px;" @click="agregarRow">
+                                <button type="button" class="round-button" style="position:static; width:40px; height:40px; font-size:18px;" @click="agregarRow">
                                   <i class="fa-solid fa-plus"></i>
                                 </button>
                               </div>
@@ -228,6 +218,65 @@
                     </div>
                 </div>
             </div>
+          </div>
+      </div>
+
+      <!-- Dashboard de KPIs -->
+      <div class="dashboard-kpis">
+          <div class="kpi-card kpi-total">
+              <div class="kpi-icon"><i class="fa-solid fa-inbox"></i></div>
+              <div class="kpi-info">
+                  <span class="kpi-valor">{{ kpi_total }}</span>
+                  <span class="kpi-label">Total Enviadas</span>
+                  <span class="kpi-items"><i class="fa-solid fa-list" style="margin-right:4px;"></i>{{ kpi_total_items }} ítems</span>
+              </div>
+          </div>
+          <div class="kpi-card kpi-nuevas">
+              <div class="kpi-icon"><i class="fa-solid fa-bell"></i></div>
+              <div class="kpi-info">
+                  <span class="kpi-valor">{{ kpi_nuevas }}</span>
+                  <span class="kpi-label">Nuevas</span>
+                  <span class="kpi-items"><i class="fa-solid fa-list" style="margin-right:4px;"></i>{{ kpi_nuevas_items }} ítems</span>
+              </div>
+          </div>
+          <div class="kpi-card kpi-proceso">
+              <div class="kpi-icon"><i class="fa-solid fa-spinner"></i></div>
+              <div class="kpi-info">
+                  <span class="kpi-valor">{{ kpi_en_proceso }}</span>
+                  <span class="kpi-label">En Proceso</span>
+                  <span class="kpi-items"><i class="fa-solid fa-list" style="margin-right:4px;"></i>{{ kpi_proceso_items }} ítems</span>
+              </div>
+          </div>
+          <div class="kpi-card kpi-resueltas">
+              <div class="kpi-icon"><i class="fa-solid fa-circle-check"></i></div>
+              <div class="kpi-info">
+                  <span class="kpi-valor">{{ kpi_resueltas }}</span>
+                  <span class="kpi-label">Resueltas</span>
+                  <span class="kpi-items"><i class="fa-solid fa-list" style="margin-right:4px;"></i>{{ kpi_resueltas_items }} ítems</span>
+              </div>
+          </div>
+          <div class="kpi-card kpi-porcentaje">
+              <div class="kpi-gauge">
+                  <svg viewBox="0 0 120 70" class="gauge-svg">
+                      <defs>
+                          <linearGradient id="gaugeGradHome" x1="0%" y1="0%" x2="100%" y2="0%">
+                              <stop offset="0%" style="stop-color:#ffb300"/>
+                              <stop offset="100%" style="stop-color:#28a745"/>
+                          </linearGradient>
+                      </defs>
+                      <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="#e9ecef" stroke-width="12" stroke-linecap="round"/>
+                      <path
+                          d="M10 60 A50 50 0 0 1 110 60"
+                          fill="none"
+                          stroke="url(#gaugeGradHome)"
+                          stroke-width="12"
+                          stroke-linecap="round"
+                          :stroke-dasharray="`${(parseFloat(kpi_pct_resueltas) / 100) * 157} 157`"
+                      />
+                  </svg>
+                  <span class="gauge-value">{{ kpi_pct_resueltas }}%</span>
+              </div>
+              <span class="kpi-label">% Resueltas</span>
           </div>
       </div>
 
@@ -268,7 +317,7 @@
                                         <option v-for="est in lista_estados_solicitud" :value="est.id">{{ est.nombre }}</option>
                                     </select>
                                   </div>
-                                  <div class="form-group">
+                                  <div v-if="!es_solicitante_normal" class="form-group">
                                       <label>Solicitante:</label>
                                       <select class="input-field" v-model="filtro_solicitante">
                                           <option :value="null">Seleccione...</option>
@@ -305,6 +354,14 @@
                                         <label>{{ neg.nombre }}</label>
                                       </div>
                                     </div>
+                                  </div>
+                                  <div class="form-group">
+                                    <label>Cotizado:</label>
+                                    <select class="input-field" v-model="filtro_cotizado">
+                                      <option :value="null">Todos</option>
+                                      <option :value="1">Sí</option>
+                                      <option :value="0">No</option>
+                                    </select>
                                   </div>
                               </div>
                               <div class="row-group">
@@ -500,12 +557,12 @@
                             <tr>
                                 <th>#</th>
                                 <th>Referencia</th>
-                                <th>Descripción</th>
-                                <th>Cantidad</th>
+                                <th>Descripción *</th>
+                                <th>Cantidad *</th>
                                 <th>Proveedor</th>
-                                <th>Marca</th>
+                                <th>Marca *</th>
                                 <th>Cotizado</th>
-                                <th>Negociador</th>
+                                <th>Negociador *</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -588,16 +645,17 @@
             </div>
             <div class="modal-body">
               <div class="productos-table-scroll">
+                <p class="required-fields-note">Los campos señalados con <strong>*</strong> son obligatorios.</p>
                 <table class="table table-bordered">
                   <thead>
                     <tr>
                       <th>Referencia</th>
-                      <th>Descripción</th>
-                      <th>Cantidad</th>
+                      <th>Descripción *</th>
+                      <th>Cantidad *</th>
                       <th>Proveedor</th>
-                      <th>Marca</th>
+                      <th>Marca *</th>
                       <!-- <th>Cotizado</th> -->
-                      <th>Negociador</th>
+                      <th>Negociador *</th>
                       <th>Eliminar</th>
                     </tr>
                   </thead>
@@ -607,19 +665,19 @@
                         <input type="text" class="input-field" v-model="row.referencia" />
                       </td>
                       <td>
-                        <input type="text" class="input-field" v-model="row.producto" />
+                        <input type="text" class="input-field" :class="{ 'input-field--error': mostrarErrores && !row.producto }" v-model="row.producto" />
                       </td>
                       <td>
-                        <input type="number" class="input-field" v-model="row.cantidad" />
+                        <input type="number" class="input-field" :class="{ 'input-field--error': mostrarErrores && (row.cantidad === '' || row.cantidad === null || row.cantidad === undefined) }" v-model="row.cantidad" />
                       </td>
                       <td>
                         <input type="text" class="input-field" v-model="row.proveedor" />
                       </td>
                       <td>
-                        <input type="text" class="input-field" v-model="row.marca" />
+                        <input type="text" class="input-field" :class="{ 'input-field--error': mostrarErrores && !row.marca }" v-model="row.marca" />
                       </td>
                       <td>
-                        <select class="input-field" v-model="row.negociador">
+                        <select class="input-field" :class="{ 'input-field--error': mostrarErrores && !row.negociador }" v-model="row.negociador">
                           <option :value="null">Seleccione...</option>
                           <option v-for="neg in list_negociadores" :key="neg.usuario" :value="neg.usuario">{{ neg.nombre }}</option>
                         </select>
@@ -642,7 +700,7 @@
                 </table>
               </div>
               <div style="margin-top: 16px;">
-                <button class="round-button" style="position:static; width:40px; height:40px; font-size:18px;" @click="agregarRow">
+                <button type="button" class="round-button" style="position:static; width:40px; height:40px; font-size:18px;" @click="agregarRow">
                   <i class="fa-solid fa-plus"></i>
                 </button>
               </div>
@@ -668,7 +726,7 @@
 
 <script setup>
 import apiUrl from "../../config.js";
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
 import { Modal } from 'bootstrap';
@@ -714,16 +772,53 @@ const filtro_id_solicitud = ref("");
 const filtro_estado_solicitud = ref(null);
 const filtro_solicitante = ref(null);
 const filtro_negociador = ref([]);
+const filtro_cotizado = ref(null);
 const anioActual = new Date().getFullYear();
 const filtro_fecha_desde = ref(`${anioActual}-01-01`);
 const filtro_fecha_hasta = ref(`${anioActual}-12-31`);
 const filtro_fan = ref(null);
+const es_solicitante_normal = ref(false);
 const mostrar_dropdown_negociadores_filtro = ref(false);
 
 const total_paginas = ref(0);
 const total_registros = ref(0);
 const limit = ref(15);
 const position = ref(1);
+
+// ── Indicadores / Dashboard ──
+const indicadores = ref([]);
+
+const kpi_total = computed(() =>
+    indicadores.value.reduce((acc, i) => acc + i.total, 0)
+);
+const kpi_nuevas = computed(() =>
+    indicadores.value
+        .filter(i => i.estado_nombre.toLowerCase().includes('nueva') || i.estado_nombre.toLowerCase().includes('nuevo'))
+        .reduce((acc, i) => acc + i.total, 0)
+);
+const kpi_resueltas = computed(() =>
+    indicadores.value
+        .filter(i => i.estado_id === 4)
+        .reduce((acc, i) => acc + i.total, 0)
+);
+const kpi_en_proceso = computed(() => kpi_total.value - kpi_nuevas.value - kpi_resueltas.value);
+const kpi_pct_resueltas = computed(() =>
+    kpi_total.value > 0 ? ((kpi_resueltas.value / kpi_total.value) * 100).toFixed(1) : '0.0'
+);
+const kpi_total_items = computed(() =>
+    indicadores.value.reduce((acc, i) => acc + (i.total_items || 0), 0)
+);
+const kpi_nuevas_items = computed(() =>
+    indicadores.value
+        .filter(i => i.estado_nombre.toLowerCase().includes('nueva') || i.estado_nombre.toLowerCase().includes('nuevo'))
+        .reduce((acc, i) => acc + (i.total_items || 0), 0)
+);
+const kpi_resueltas_items = computed(() =>
+    indicadores.value
+        .filter(i => i.estado_id === 4)
+        .reduce((acc, i) => acc + (i.total_items || 0), 0)
+);
+const kpi_proceso_items = computed(() => kpi_total_items.value - kpi_nuevas_items.value - kpi_resueltas_items.value);
 
 const mostrarErrores = ref(false);
 
@@ -791,13 +886,20 @@ const router = useRouter();
 const validarFormulario = () => {
     mostrarErrores.value = true;
 
-    if (
-      negociador.value.length === 0 || !asunto.value || !cuerpo_texto.value
-    ) {
-        return; // Detener el envío si hay errores
+    // Validar campos superiores
+    if (!tercero_seleccionado.value || negociador.value.length === 0 || !asunto.value || !cuerpo_texto.value) {
+        return;
     }
 
-    guardar_solicitud(); // Llamar a la función original si todo está correcto
+    // Validar campos obligatorios de cada producto
+    const productosInvalidos = productos.value.some(
+        row => !row.producto || row.cantidad === '' || row.cantidad === null || row.cantidad === undefined || !row.marca || !row.negociador
+    );
+    if (productosInvalidos) {
+        return;
+    }
+
+    guardar_solicitud();
 };
 
 const guardar_solicitud = async () => {
@@ -980,13 +1082,15 @@ const toggleNegociador = (usuario) => {
 
 const mostrarSolicitudes = async () => {
     try {
+        const solicitante_filtro = es_solicitante_normal.value ? usuario_creador.value : filtro_solicitante.value;
         const response = await axios.post(
             `${apiUrl}/mostrar_solicitudes`, 
             {
                 solicitud_id: filtro_id_solicitud.value,
                 estado_solicitud: filtro_estado_solicitud.value,
-                solicitante: filtro_solicitante.value,
+                solicitante: solicitante_filtro,
                 negociador: filtro_negociador.value,
+                cotizado: filtro_cotizado.value,
                 fecha_desde: filtro_fecha_desde.value,
                 fecha_hasta: filtro_fecha_hasta.value,
                 fan: filtro_fan.value,
@@ -1004,6 +1108,7 @@ const mostrarSolicitudes = async () => {
             lista_solicitudes.value = response.data.data.registros;
             total_paginas.value = response.data.data.total_pag;
             total_registros.value = response.data.data.total_registros;
+            indicadores.value = response.data.data.indicadores || [];
         }
 
     } catch (error) {
@@ -1072,8 +1177,9 @@ const limpiarCamposFiltro = async () => {
   const anio = new Date().getFullYear();
   filtro_id_solicitud.value = "";
   filtro_estado_solicitud.value = null;
-  filtro_solicitante.value = null;
+  filtro_solicitante.value = es_solicitante_normal.value ? usuario_creador.value : null;
   filtro_negociador.value = [];
+  filtro_cotizado.value = null;
   filtro_fecha_desde.value = `${anio}-01-01`;
   filtro_fecha_hasta.value = `${anio}-12-31`;
   filtro_fan.value = null;
@@ -1171,6 +1277,16 @@ function abrirModalProductos() {
   productosModalInstance.value.show();
 }
 
+// ✅ Watcher que auto-detecta negociadores únicos desde las filas de productos
+watch(productos, (nuevosProductos) => {
+  const unicos = [...new Set(
+    nuevosProductos
+      .map(p => p.negociador)
+      .filter(n => n !== null && n !== undefined && n !== '')
+  )];
+  negociador.value = unicos;
+}, { deep: true });
+
 // ✅ Watcher para mostrarAcordeonProductos
 watch(mostrarAcordeonProductos, (nuevoValor) => {
   if (nuevoValor) {
@@ -1189,6 +1305,10 @@ watch(mostrarAcordeonProductos, (nuevoValor) => {
 onMounted(() => {
   token.value = localStorage.getItem("token");
   usuario_creador.value = localStorage.getItem("usuario_creador");
+  es_solicitante_normal.value = localStorage.getItem("es_solicitante_normal") === "true";
+  if (es_solicitante_normal.value) {
+    filtro_solicitante.value = usuario_creador.value;
+  }
 
   modalInstance.value = new Modal(exitoModal);
   modalErrorInstance.value = new Modal(errorModal);
@@ -1875,6 +1995,57 @@ textarea.input-field {
     background-color: #ffe6e6;
 }
 
+.input-field--error {
+    border-color: red !important;
+    background-color: #ffe6e6 !important;
+}
+
+/* Campo de negociadores de solo lectura (auto-detectado) */
+.negociadores-readonly {
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  background-color: #f9fafb;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  cursor: default;
+  transition: border-color 0.2s;
+}
+
+.negociadores-readonly--error {
+  border-color: red;
+  background-color: #ffe6e6;
+}
+
+.negociadores-readonly__placeholder {
+  color: #aaa;
+  font-size: 0.88em;
+  font-style: italic;
+}
+
+.negociador-chip {
+  display: inline-flex;
+  align-items: center;
+  background: linear-gradient(135deg, #2778bf 0%, #4385be 100%);
+  color: white;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 0.82em;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(39,120,191,0.25);
+}
+
+.required-fields-note {
+    font-size: 0.85em;
+    color: #555;
+    margin-bottom: 8px;
+}
+
 .error-text {
     color: red;
     font-size: 0.85em;
@@ -2042,6 +2213,142 @@ textarea.input-field {
 .solicitud-fan:hover td {
   color: #7a5800 !important;
   font-weight: 600;
+}
+
+/* =============================================
+   Dashboard de KPIs
+   ============================================= */
+.dashboard-kpis {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    width: 80%;
+    margin: 16px auto;
+    padding: 0 4px;
+}
+
+.kpi-card {
+    flex: 1 1 160px;
+    min-width: 140px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    border-left: 5px solid #e9ecef;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.kpi-card::after {
+    content: '';
+    position: absolute;
+    top: -20px;
+    right: -20px;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    opacity: 0.06;
+    background: currentColor;
+}
+
+.kpi-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.12);
+}
+
+.kpi-total     { border-left-color: #2778bf; }
+.kpi-nuevas    { border-left-color: #17a2b8; }
+.kpi-proceso   { border-left-color: #ffb300; }
+.kpi-resueltas { border-left-color: #28a745; }
+.kpi-porcentaje { border-left-color: #6f42c1; flex-direction: column; align-items: center; gap: 0; }
+
+.kpi-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.kpi-total    .kpi-icon { background: #e8f0fb; color: #2778bf; }
+.kpi-nuevas   .kpi-icon { background: #e0f7fa; color: #17a2b8; }
+.kpi-proceso  .kpi-icon { background: #fff8e1; color: #ffb300; }
+.kpi-resueltas .kpi-icon { background: #e8f5e9; color: #28a745; }
+
+.kpi-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.kpi-valor {
+    font-size: 1.8rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #1a1a1a;
+}
+
+.kpi-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    margin-top: 2px;
+}
+
+.kpi-items {
+    font-size: 0.72rem;
+    color: #9ca3af;
+    font-weight: 500;
+    margin-top: 3px;
+    display: flex;
+    align-items: center;
+}
+
+.kpi-gauge {
+    position: relative;
+    width: 100px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+}
+
+.gauge-svg {
+    width: 100px;
+    height: 60px;
+    overflow: visible;
+}
+
+.gauge-value {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 1.2rem;
+    font-weight: 800;
+    color: #6f42c1;
+    line-height: 1;
+}
+
+.kpi-porcentaje .kpi-label {
+    margin-top: 4px;
+}
+
+@media (max-width: 900px) {
+    .dashboard-kpis {
+        width: 95%;
+    }
+    .kpi-card {
+        flex: 1 1 130px;
+    }
 }
 
 </style>
